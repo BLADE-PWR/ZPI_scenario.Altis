@@ -151,8 +151,8 @@ ZPI_fnc_initKeys = {
         ["MouseMoving", _d displayAddEventHandler ["MouseMoving", {
             params ["_disp", "_dx", "_dy"];
             if (!ZPI_tourRunning) then {
-                ZPI_mouseDX = ZPI_mouseDX + _dx;
-                ZPI_mouseDY = ZPI_mouseDY + _dy;
+                ZPI_mouseDX = ZPI_mouseDX + _dx * diag_deltaTime;
+                ZPI_mouseDY = ZPI_mouseDY + _dy * diag_deltaTime;
             };
         }]],
         ["MouseZChanged", _d displayAddEventHandler ["MouseZChanged", {

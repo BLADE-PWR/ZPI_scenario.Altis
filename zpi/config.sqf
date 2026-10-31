@@ -16,7 +16,7 @@ ZPI_cfg_targetGSD    = 0.010;    // m/px -> standing soldier ~180 px from the si
 ZPI_cfg_scaleLockRate = 4;       // how fast the zoom follows range changes (1/s)
 
 // ---- camera ------------------------------------
-ZPI_cfg_mouseSens     = 0.05;    // deg per mouse unit at 60 deg FOV (scaled down when zoomed in)
+ZPI_cfg_mouseSens     = 15;      // mouse sensitivity (higher = faster)
 ZPI_cfg_keyLookRate   = 60;      // deg/s for arrow-key look at 60 deg FOV
 ZPI_cfg_MinSpeed      = 10;      // m/s; speed grows with height above ground ...
 ZPI_cfg_MaxSpeed      = 200;     // ... up to this

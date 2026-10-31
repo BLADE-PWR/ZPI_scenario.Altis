@@ -39,7 +39,8 @@ ZPI_fnc_tourAim = {             // [targetASL, azimuth (camera side), elevation 
     ZPI_camDir = _d;
     ZPI_camUp  = [ZPI_yaw, ZPI_pitch] call ZPI_fnc_upFromYawPitch;
     ZPI_camVel = [0, 0, 0];
-    ZPI_mouseDX = 0; ZPI_mouseDY = 0;
+    ZPI_mouseDX = 0;
+    ZPI_mouseDY = 0;
     call ZPI_fnc_applyCamPose;
 };
 

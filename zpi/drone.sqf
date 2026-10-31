@@ -61,18 +61,20 @@ ZPI_fnc_keyHeld = {
 ZPI_fnc_updateCam = {
     params ["_dt"];
     private _fovScale = (ZPI_hfov / 60) max 0.03;
+    // yaw = pan (cos pitch, moves the image sideways, scales with FOV) + roll (sin pitch, rotates it around the centre,
+    // doesn't scale): pan and roll are perpendicular motions, so they add like the two sides of a right triangle
+    private _yawScale = _fovScale / sqrt ((cos ZPI_pitch)^2 + (_fovScale * sin ZPI_pitch)^2);
 
     // look: mouse deltas + arrow keys, scaled by FOV so zoomed views stay controllable
-    private _sens = ZPI_cfg_mouseSens * _fovScale;
-    ZPI_yaw   = ZPI_yaw + ZPI_mouseDX * _sens;
-    ZPI_pitch = ZPI_pitch - ZPI_mouseDY * _sens;
+    ZPI_yaw   = ZPI_yaw + ZPI_mouseDX * ZPI_cfg_mouseSens * _yawScale;
+    ZPI_pitch = ZPI_pitch - ZPI_mouseDY * ZPI_cfg_mouseSens * _fovScale;
     ZPI_mouseDX = 0;
     ZPI_mouseDY = 0;
-    private _rate = ZPI_cfg_keyLookRate * _fovScale * _dt;
-    if ([203] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw - _rate };        // Left
-    if ([205] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw + _rate };        // Right
-    if ([200] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch + _rate };    // Up
-    if ([208] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch - _rate };    // Down
+    private _rate = ZPI_cfg_keyLookRate * _dt;
+    if ([203] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw - _rate * _yawScale };       // Left
+    if ([205] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw + _rate * _yawScale };       // Right
+    if ([200] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch + _rate * _fovScale };   // Up
+    if ([208] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch - _rate * _fovScale };   // Down
     ZPI_yaw   = (ZPI_yaw + 360) mod 360;
     ZPI_pitch = (ZPI_pitch max -89.5) min 89.5;
 
