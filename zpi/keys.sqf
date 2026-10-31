@@ -32,13 +32,23 @@ ZPI_helpText = "<t size='1.1' font='RobotoCondensedBold'>ZPI drone scenes</t><br
     + "Shift+' clutter, no targets (background pictures)<br/>"
     + "N new layout &#160; X clear &#160; L next location<br/>"
     + "C scene to where you look &#160; J camera to scene<br/><br/>"
-    + "T time &#160; Y weather &#160;<br/>"
-    + "U quiet (no text) &#160; H help"
+    + "T time &#160; Y weather<br/>"
+    + "U quiet (no HUD) <br/>"
+    + "H help"
     + "</t>";
 
+ZPI_helpOpen = false;
 ZPI_fnc_showHelp = {
+    if (ZPI_quiet || ZPI_helpOpen) exitWith { true };
+    ZPI_helpOpen = true;
     hintSilent parseText ZPI_helpText;
-    [] spawn { sleep 10; hintSilent "" };
+    [] spawn {
+        sleep 10;
+        if (ZPI_helpOpen) then {
+            ZPI_helpOpen = false;
+            hintSilent "";
+        };
+    };
 };
 
 // keys used for camera movement: tracked as held, swallowed so the game ignores them
@@ -116,11 +126,12 @@ ZPI_fnc_onKey = {
             if (ZPI_quiet) then {
                 call ZPI_fnc_hideHud;
                 ("ZPI_msgLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
+                hintSilent "";
+                ZPI_helpOpen = false;
             } else {
                 call ZPI_fnc_showHud;
                 ["Quiet mode off"] call ZPI_fnc_msg;
             };
-            hintSilent "";
         };
         case 35: { call ZPI_fnc_showHelp };                                 // H
         default { _handled = false };

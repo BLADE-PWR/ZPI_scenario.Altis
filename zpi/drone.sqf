@@ -132,7 +132,7 @@ ZPI_fnc_createCamera = {
     showCinemaBorder false;
     ZPI_cam cameraEffect ["internal", "back"];
     call ZPI_fnc_showHud;
-    cameraEffectEnableHUD false;
+    cameraEffectEnableHUD true;
     [true] call ZPI_fnc_viewScene;
 };
 

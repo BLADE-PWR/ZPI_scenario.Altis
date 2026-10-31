@@ -80,8 +80,6 @@ ZPI_fnc_msg = {
     params ["_text"];
     if (!ZPI_quiet) then {
         systemChat ("[ZPI] " + _text);
-        // chat may be hidden while the scripted camera is active, so also show it as screen text
-        ("ZPI_msgLayer" call BIS_fnc_rscLayer) cutText [_text, "PLAIN DOWN", 0.2];
     };
 };
 
