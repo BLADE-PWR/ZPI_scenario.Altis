@@ -618,7 +618,6 @@ ZPI_fnc_unfreeze = {
     { if (!isNull _x) then { _x enableSimulation true } } forEach ZPI_capFrozen;
     ZPI_capFrozen = [];
     ZPI_frozen = false;
-    ZPI_lastTick = diag_tickTime;
     ZPI_mouseDX = 0;                 // drop mouse movement made during the freeze
     ZPI_mouseDY = 0;
 };
@@ -687,7 +686,6 @@ ZPI_fnc_releaseRef = {
     ZPI_fovLock = false;
     ZPI_mouseDX = 0;
     ZPI_mouseDY = 0;
-    ZPI_lastTick = diag_tickTime;
 };
 
 // ---- explosions feed the label list -----------------------------------------------------

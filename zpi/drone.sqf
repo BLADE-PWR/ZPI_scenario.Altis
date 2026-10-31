@@ -6,7 +6,6 @@
 //  setVectorDirAndUp).
 // =====================================================================
 
-ZPI_lastTick    = 0;
 ZPI_frozen      = false;   // true while a capture is being taken
 ZPI_camLock     = false;   // camera pose held still (explosion reference shots, orthophoto)
 ZPI_fovLock     = false;   // zoom held still (explosion reference shots)
@@ -319,9 +318,8 @@ ZPI_fnc_updateHud = {
 
 // ---- per-frame loop -------------------------------------------------------------
 ZPI_fnc_onFrame = {
-    if (isGamePaused) exitWith { ZPI_lastTick = diag_tickTime };
-    private _rdt = ((diag_tickTime - ZPI_lastTick) max 0) min 0.1;   // real time, for the camera
-    ZPI_lastTick = diag_tickTime;
+    if (isGamePaused) exitWith {};
+    private _rdt = diag_deltaTime min 0.1;
 
     if (!ZPI_frozen && {!ZPI_camLock}) then {
         [_rdt] call ZPI_fnc_updateCam;

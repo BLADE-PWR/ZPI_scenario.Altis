@@ -67,7 +67,6 @@ ZPI_center       = [0, 0, 0];
         worldName, ZPI_cfg_faction, count ZPI_locations, productVersion select 0, productVersion select 2,
         str ((getResolution) select [0, 2]), ZPI_sessionTag, str ZPI_yoloClasses]] call ZPI_fnc_event;
 
-    ZPI_lastTick = diag_tickTime;
     addMissionEventHandler ["EachFrame", { call ZPI_fnc_onFrame }];
 
     if (ZPI_cfg_startScene >= 0) then { [ZPI_cfg_startScene] call ZPI_fnc_runScene };

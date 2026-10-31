@@ -105,7 +105,6 @@ ZPI_fnc_orthoCapture = {
         if (_fight) then { call ZPI_fnc_toggleFirefight };
         ZPI_camLock = false;
         ZPI_mouseDX = 0; ZPI_mouseDY = 0;
-        ZPI_lastTick = diag_tickTime;
         ZPI_orthoRunning = false;
         [format ["Orthophoto done: %1 tiles, %2 objects. Run tools/make_ortho.py", _done, count _items]] call ZPI_fnc_msg;
     };
