@@ -51,7 +51,7 @@ ZPI_fnc_showHelp = {
     };
 };
 
-// keys used for camera movement: tracked as held, swallowed so the game ignores them
+// keys used for camera movement
 ZPI_moveKeys = [17, 30, 31, 32, 16, 18, 42, 54, 200, 203, 205, 208];
 
 ZPI_fnc_onKeyUp = {

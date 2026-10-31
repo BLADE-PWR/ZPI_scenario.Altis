@@ -53,7 +53,10 @@ ZPI_fnc_applyCamPose = {
 
 // ---- camera ------------------------------------------------------------------
 // WASD move, E/Q up/down, Shift = fast, mouse = look, wheel = zoom, arrows = look.
-ZPI_fnc_keyHeld = { params ["_dik"]; ZPI_keysDown getOrDefault [_dik, false] };
+ZPI_fnc_keyHeld = {
+    params ["_dik"];
+    ZPI_keysDown getOrDefault [_dik, false]
+};
 
 ZPI_fnc_updateCam = {
     params ["_dt"];
@@ -63,12 +66,13 @@ ZPI_fnc_updateCam = {
     private _sens = ZPI_cfg_mouseSens * _fovScale;
     ZPI_yaw   = ZPI_yaw + ZPI_mouseDX * _sens;
     ZPI_pitch = ZPI_pitch - ZPI_mouseDY * _sens;
-    ZPI_mouseDX = 0; ZPI_mouseDY = 0;
+    ZPI_mouseDX = 0;
+    ZPI_mouseDY = 0;
     private _rate = ZPI_cfg_keyLookRate * _fovScale * _dt;
-    if ([203] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw - _rate };
-    if ([205] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw + _rate };
-    if ([200] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch + _rate };
-    if ([208] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch - _rate };
+    if ([203] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw - _rate };        // Left
+    if ([205] call ZPI_fnc_keyHeld) then { ZPI_yaw = ZPI_yaw + _rate };        // Right
+    if ([200] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch + _rate };    // Up
+    if ([208] call ZPI_fnc_keyHeld) then { ZPI_pitch = ZPI_pitch - _rate };    // Down
     ZPI_yaw   = (ZPI_yaw + 360) mod 360;
     ZPI_pitch = (ZPI_pitch max -89.5) min 89.5;
 
@@ -88,7 +92,6 @@ ZPI_fnc_updateCam = {
     private _right = [cos ZPI_yaw, -(sin ZPI_yaw), 0];
     private _vWant = ((_fwd vectorMultiply (_in select 1)) vectorAdd (_right vectorMultiply (_in select 0))) vectorMultiply _speed;
     _vWant set [2, (_in select 2) * _speed * 0.6];
-    // exponential smoothing = no sudden starts/stops
     ZPI_camVel = ZPI_camVel vectorAdd ((_vWant vectorDiff ZPI_camVel) vectorMultiply (1 - exp (-ZPI_cfg_Smoothing * _dt)));
     private _p = ZPI_camPosASL vectorAdd (ZPI_camVel vectorMultiply _dt);
     _p set [2, (_p select 2) max (((getTerrainHeightASL _p) max 0) + 2)];

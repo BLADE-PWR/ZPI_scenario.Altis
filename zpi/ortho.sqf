@@ -97,14 +97,19 @@ ZPI_fnc_orthoCapture = {
         // ---- restore ----
         { if (!isNull _x) then { _x enableSimulation true } } forEach _frozen;
         _saved params ["_pos", "_dir", "_up", "_yaw", "_pitch", "_fov", "_lock", "_auto", "_fight"];
-        ZPI_camPosASL = _pos; ZPI_camDir = _dir; ZPI_camUp = _up; ZPI_yaw = _yaw; ZPI_pitch = _pitch;
+        ZPI_camPosASL = _pos;
+        ZPI_camDir = _dir;
+        ZPI_camUp = _up;
+        ZPI_yaw = _yaw;
+        ZPI_pitch = _pitch;
         call ZPI_fnc_applyCamPose;
         [_fov] call ZPI_fnc_setFov;
         ZPI_scaleLock = _lock;
         ZPI_autoCapture = _auto;
         if (_fight) then { call ZPI_fnc_toggleFirefight };
         ZPI_camLock = false;
-        ZPI_mouseDX = 0; ZPI_mouseDY = 0;
+        ZPI_mouseDX = 0;
+        ZPI_mouseDY = 0;
         ZPI_orthoRunning = false;
         [format ["Orthophoto done: %1 tiles, %2 objects. Run tools/make_ortho.py", _done, count _items]] call ZPI_fnc_msg;
     };
