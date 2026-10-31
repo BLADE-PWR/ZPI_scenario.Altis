@@ -93,9 +93,9 @@ The readout and the crosshair are UI, so they never appear in **P** screenshots:
 
 | Key | Action |
 |---|---|
-| W A S D / E Q / Shift | move / up, down / faster |
-| Mouse, arrow keys | look |
-| Mouse wheel, PgUp / PgDn | zoom (presets 75, 45, 30, 15, 8, 4, 2, 1.2°) |
+| W A S D / E Q / Shift | move horizontally / up, down / faster |
+| Mouse or arrow keys | look |
+| Mouse wheel, PgUp / PgDn | change the FOV |
 | R | constant pixel size on/off (see below) |
 
 **Dataset:**

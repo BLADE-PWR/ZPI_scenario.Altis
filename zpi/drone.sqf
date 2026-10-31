@@ -150,24 +150,11 @@ ZPI_fnc_setFov = {
     call ZPI_fnc_applyCamPose;
 };
 
-ZPI_fnc_zoomStep = {              // +1 = zoom in (narrower FOV), -1 = zoom out
-    params ["_step"];
-    if (ZPI_fovLock) exitWith {};
-    if (ZPI_scaleLock) exitWith { [ZPI_targetGSD * ([1.25, 0.8] select (_step > 0))] call ZPI_fnc_setGSD };
-    // continue from the nearest preset to the current FOV
-    private _i = 0; private _best = 1e9;
-    { if (abs (_x - ZPI_hfov) < _best) then { _best = abs (_x - ZPI_hfov); _i = _forEachIndex } } forEach ZPI_cfg_fovPresets;
-    private _next = ((_i + _step) max 0) min (count ZPI_cfg_fovPresets - 1);
-    [ZPI_cfg_fovPresets select _next] call ZPI_fnc_setFov;
-    ["fov", format ['{"hfov_deg":%1}', ZPI_hfov]] call ZPI_fnc_event;
-    [format ["FOV %1 deg", ZPI_hfov]] call ZPI_fnc_msg;
-};
-
-ZPI_fnc_wheelZoom = {             // smooth zoom with the mouse wheel
+ZPI_fnc_zoom = {                  // _z > 0 zoom in, < 0 zoom out
     params ["_z"];
     if (ZPI_fovLock) exitWith {};
-    if (ZPI_scaleLock) exitWith { [ZPI_targetGSD * (ZPI_cfg_wheelStep ^ _z)] call ZPI_fnc_setGSD };
-    [ZPI_hfov * (ZPI_cfg_wheelStep ^ _z)] call ZPI_fnc_setFov;
+    if (ZPI_scaleLock) exitWith { [ZPI_targetGSD * (ZPI_cfg_zoomStep ^ _z)] call ZPI_fnc_setGSD };
+    [ZPI_hfov * (ZPI_cfg_zoomStep ^ _z)] call ZPI_fnc_setFov;
 };
 
 // ---- frame-number bar (image <-> telemetry sync) --------------------------
@@ -271,7 +258,7 @@ ZPI_fnc_gsdNow = {
 // ---- constant pixel size: zoom follows the laser range --------------------------------
 ZPI_fnc_setGSD = {
     params ["_g"];
-    ZPI_targetGSD = (_g max (ZPI_cfg_gsdLimits select 0)) min (ZPI_cfg_gsdLimits select 1);
+    ZPI_targetGSD = (_g max 0.004) min 0.5;
     [format ["Scale %1 m/px: soldier ~%2 px tall, tank ~%3 px long", ZPI_targetGSD toFixed 3, round (1.8 / ZPI_targetGSD), round (7 / ZPI_targetGSD)]] call ZPI_fnc_msg;
 };
 

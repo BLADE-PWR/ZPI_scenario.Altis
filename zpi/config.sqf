@@ -13,7 +13,6 @@ ZPI_cfg_startScene   = 6;        // scene launched at mission start (-1 = none)
 // With the lock on, every screenshot has the same scale: a standing soldier (1.8 m) is
 // 1.8 / GSD pixels tall, a tank (~7 m long) about 7 / GSD pixels.
 ZPI_cfg_targetGSD    = 0.010;    // m/px -> standing soldier ~180 px from the side, ~60 x 90 px seen from above at 45-60 deg
-ZPI_cfg_gsdLimits    = [0.004, 0.5];
 ZPI_cfg_scaleLockRate = 4;       // how fast the zoom follows range changes (1/s)
 
 // ---- camera ------------------------------------
@@ -23,13 +22,12 @@ ZPI_cfg_MinSpeed      = 10;      // m/s; speed grows with height above ground ..
 ZPI_cfg_MaxSpeed      = 200;     // ... up to this
 ZPI_cfg_FastMul       = 4;       // Shift multiplier
 ZPI_cfg_Smoothing     = 6;       // higher = snappier, lower = smoother movement
-ZPI_cfg_wheelStep     = 0.9;     // FOV multiplier per mouse-wheel step
-ZPI_cfg_viewDist      = 500;     // m: when a scene is out of view, the camera jumps this far from it ...
-ZPI_cfg_viewHeight    = 250;     // ... and this high above it, looking at the scene
-ZPI_cfg_fovPresets   = [100, 75, 45, 30, 15, 8, 4, 2, 1.6];
+ZPI_cfg_zoomStep     = 0.9;      // FOV multiplier per mouse-wheel step
 ZPI_cfg_startFov     = 30;       // deg, horizontal FOV at mission start
 
 // ---- dataset capture (P = shot, Shift+P = auto) -------------------------------------
+ZPI_cfg_viewDist      = 500;     // m: when a scene is out of view, the camera jumps this far from it ...
+ZPI_cfg_viewHeight    = 250;     // ... and this high above it, looking at the scene
 ZPI_cfg_autoInterval  = 2;       // s between automatic captures
 ZPI_cfg_minBoxPx      = 4;       // smaller boxes are dropped (px, on screen resolution)
 ZPI_cfg_minVisible    = 0.3;     // fraction of the object visible (trees, walls, nets, terrain)

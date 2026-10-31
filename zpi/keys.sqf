@@ -6,8 +6,7 @@ ZPI_helpText = "<t size='1.1' font='RobotoCondensedBold'>ZPI drone scenes</t><br
     + "<t align='left'>"
     + "<t color='#ffd27a'>CAMERA</t><br/>"
     + "WASD move, E up, Q down, Shift fast<br/>"
-    + "Mouse look, wheel zoom, arrows look<br/>"
-    + "PgUp / PgDn zoom presets (75 ... 1.2 deg)<br/>"
+    + "Mouse look, wheel (or PgUp/PgDn) zoom, arrows look<br/>"
     + "R constant pixel size on/off (zoom follows range)<br/><br/>"
     + "<t color='#ffd27a'>DATASET</t><br/>"
     + "P screenshot + labels<br/>"
@@ -107,8 +106,8 @@ ZPI_fnc_onKey = {
             if (_lp isEqualTo []) then { ["Look at the ground first (middle of the screen)"] call ZPI_fnc_msg } else { [_lp, -1, false] call ZPI_fnc_setCenter };
         };
         case 36: { [true] call ZPI_fnc_viewScene };                         // J: camera to the scene
-        case 201: { [1] call ZPI_fnc_zoomStep };                            // PgUp
-        case 209: { [-1] call ZPI_fnc_zoomStep };                           // PgDn
+        case 201: { [1] call ZPI_fnc_zoom };                                // PgUp
+        case 209: { [-1] call ZPI_fnc_zoom };                               // PgDn
         case 20: { call ZPI_fnc_nextTime };                                 // T
         case 21: { call ZPI_fnc_nextWeather };                              // Y
         case 22: {                                                          // U
@@ -147,7 +146,7 @@ ZPI_fnc_initKeys = {
         }]],
         ["MouseZChanged", _d displayAddEventHandler ["MouseZChanged", {
             params ["_disp", "_z"];
-            if (!ZPI_tourRunning) then { [_z] call ZPI_fnc_wheelZoom };
+            if (!ZPI_tourRunning) then { [_z] call ZPI_fnc_zoom };
         }]]
     ]];
 };
