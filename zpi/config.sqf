@@ -30,7 +30,6 @@ ZPI_cfg_soldierTightBox = true;  // label = union of the projected body parts (t
 ZPI_cfg_soldierPartPad  = 0.03;  // m around each body part (uniform, vest)
 ZPI_cfg_soldierHelmet   = 0.08;  // m added above the head (helmet)
 ZPI_cfg_soldierBackpack = 0.22;  // m added behind the back when he carries a backpack
-ZPI_cfg_labelBuildings = true;   // every building in the picture gets a "building" box
 ZPI_cfg_labelsPerLine = 3;       // boxes per log line (log lines over ~1000 characters may get cut off)
 // explosion label size by ammo power: [radius m, height m, duration s]
 ZPI_cfg_expLarge  = [9, 14, 3];

@@ -361,11 +361,9 @@ ZPI_fnc_computeLabels = {
         };
     } forEach ZPI_entities;
 
-    // buildings (terrain houses, churches, ...): every building in the picture gets a box,
-    // so the "building" class is labelled consistently in all screenshots
-    if (ZPI_cfg_labelBuildings) then {
-        { _boxes pushBack _x } forEach ([_basis, _th, _tv, _W, _H] call ZPI_fnc_buildingLabels);
-    };
+    {
+        _boxes pushBack _x;
+    } forEach ([_basis, _th, _tv, _W, _H] call ZPI_fnc_buildingLabels);
 
     // explosions: approximate fireball + dust column that grows over time.
     // make_yolo_dataset.py replaces it with the measured box when a reference image exists.
