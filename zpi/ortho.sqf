@@ -24,6 +24,7 @@ ZPI_fnc_orthoCapture = {
         // ---- save the current view, hold everything still ----
         private _saved = [ZPI_camPosASL, ZPI_camDir, ZPI_camUp, ZPI_yaw, ZPI_pitch, ZPI_hfov, ZPI_scaleLock, ZPI_autoCapture, ZPI_firefight];
         ZPI_camLock = true;
+        ZPI_fovLock = true;
         ZPI_scaleLock = false;
         ZPI_autoCapture = false;
         ZPI_firefight = false;
@@ -111,6 +112,7 @@ ZPI_fnc_orthoCapture = {
         ZPI_autoCapture = _auto;
         if (_fight) then { call ZPI_fnc_toggleFirefight };
         ZPI_camLock = false;
+        ZPI_fovLock = false;
         ZPI_mouseDX = 0;
         ZPI_mouseDY = 0;
         ZPI_orthoRunning = false;

@@ -7,7 +7,8 @@
 //
 //  How a capture works (all automatic):
 //    frame 0  freeze: camera stops, moving units are frozen
-//    frame 1  boxes from the game's own 3D geometry + screenshot, then unfreeze
+//    frame 1  boxes from the game's own 3D geometry + screenshot
+//    frame 2  unfreeze (the screenshot is saved when frame 1 is rendered)
 //  Log records per screenshot (one line each, kept short for the RPT):
 //    ZPI|shot|   image, camera pose + FOV + attitude + altitude
 //    ZPI|shotx|  laser rangefinder, scene, time, weather, explosion reference image, building occupancy
@@ -23,6 +24,7 @@ ZPI_yoloClasses = ["soldier", "tank", "military_vehicle", "explosion"];   // for
 ZPI_clsToKind = createHashMapFromArray [["soldier", "s"], ["tracked_vehicle", "t"], ["wheeled_vehicle", "v"]];
 
 ZPI_capFrozen    = [];
+ZPI_capTaken     = false; // screenshot taken this capture; it is saved when its frame is rendered
 ZPI_autoCapture  = false;
 ZPI_autoInterval = 2;     // s between automatic captures
 ZPI_nextAuto     = 0;
@@ -664,10 +666,16 @@ ZPI_fnc_captureTick = {
     if (ZPI_camLock && {ZPI_refImage != ""} && {time > ZPI_refUntil} && {!ZPI_frozen}) then { call ZPI_fnc_releaseRef };
 
     if (ZPI_frozen) then {
-        // frozen since last frame: what is rendered now matches the frozen state
-        call ZPI_fnc_doCapture;
-        call ZPI_fnc_unfreeze;
-        if (ZPI_refImage != "") then { call ZPI_fnc_releaseRef };
+        if (!ZPI_capTaken) then {
+            // frozen since last frame: what is rendered now matches the frozen state
+            call ZPI_fnc_doCapture;
+            ZPI_capTaken = true;
+        } else {
+            // the screenshot is saved when its frame is rendered: nothing may move or teleport before that
+            ZPI_capTaken = false;
+            call ZPI_fnc_unfreeze;
+            if (ZPI_refImage != "") then { call ZPI_fnc_releaseRef };
+        };
     } else {
         if (ZPI_pendingCapture >= 0 && {time >= ZPI_pendingCapture}) exitWith {
             ZPI_pendingCapture = -1;

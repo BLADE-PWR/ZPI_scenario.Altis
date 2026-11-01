@@ -8,7 +8,7 @@
 
 ZPI_frozen      = false;   // true while a capture is being taken
 ZPI_camLock     = false;   // camera pose held still (explosion reference shots, orthophoto)
-ZPI_fovLock     = false;   // zoom held still (explosion reference shots)
+ZPI_fovLock     = false;   // zoom held still
 
 // laser rangefinder: first surface in the middle of the screen
 ZPI_laserRange  = -1;      // m, -1 = nothing hit (sky)
