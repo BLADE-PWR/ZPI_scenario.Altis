@@ -60,10 +60,10 @@ ZPI_fnc_keyHeld = {
 
 ZPI_fnc_updateCam = {
     params ["_dt"];
-    private _fovScale = (ZPI_hfov / 60) max 0.03;
+    private _fovScale = tan (ZPI_hfov / 2) / tan (30);
     // yaw = pan (cos pitch, moves the image sideways, scales with FOV) + roll (sin pitch, rotates it around the centre,
     // doesn't scale): pan and roll are perpendicular motions, so they add like the two sides of a right triangle
-    private _yawScale = _fovScale / sqrt ((cos ZPI_pitch)^2 + (_fovScale * sin ZPI_pitch)^2);
+    private _yawScale = 1 / sqrt ((cos ZPI_pitch / _fovScale)^2 + (sin ZPI_pitch)^2);
 
     // look: mouse deltas + arrow keys, scaled by FOV so zoomed views stay controllable
     ZPI_yaw   = ZPI_yaw + ZPI_mouseDX * ZPI_cfg_mouseSens * _yawScale;
