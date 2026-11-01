@@ -8,7 +8,10 @@
 ZPI_fnc_initLocations = {
     private _m = allMapMarkers select { (_x find "ZPI_center") == 0 };
     _m sort true;
-    ZPI_locations = _m apply { private _p = markerPos _x; [_p select 0, _p select 1, 0] };
+    ZPI_locations = _m apply {
+        private _p = markerPos _x;
+        [_p select 0, _p select 1, 0]
+    };
     if (ZPI_locations isEqualTo []) then {
         private _p = getPosATL player;
         ZPI_locations = [[_p select 0, _p select 1, 0]];

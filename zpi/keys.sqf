@@ -95,7 +95,10 @@ ZPI_fnc_onKey = {
         case 26: { [11] call ZPI_fnc_runScene };                            // [ tank column
         case 27: { [12] call ZPI_fnc_runScene };                            // ] squads split
         case 199: {                                                         // Home: automatic flight on/off
-            if (ZPI_tourRunning) then { ZPI_tourStop = true; ["Stopping the automatic flight after this shot"] call ZPI_fnc_msg }
+            if (ZPI_tourRunning) then {
+                ZPI_tourStop = true;
+                ["Stopping the automatic flight after this shot"] call ZPI_fnc_msg;
+            }
             else { [] spawn ZPI_fnc_tourDataset };
         };
         case 48: { call ZPI_fnc_barrage };                                  // B

@@ -239,7 +239,11 @@ ZPI_fnc_logGT = {
 ZPI_fnc_updateLaser = {
     private _hits = lineIntersectsSurfaces [ZPI_camPosASL, ZPI_camPosASL vectorAdd (ZPI_camDir vectorMultiply 8000),
         objNull, objNull, true, 1, "GEOM", "NONE"];
-    if (_hits isEqualTo []) exitWith { ZPI_laserRange = -1; ZPI_laserPos = []; ZPI_laserObj = "" };
+    if (_hits isEqualTo []) exitWith {
+        ZPI_laserRange = -1;
+        ZPI_laserPos = [];
+        ZPI_laserObj = "";
+    };
     private _h = _hits select 0;
     ZPI_laserPos = _h select 0;
     ZPI_laserRange = ZPI_camPosASL vectorDistance ZPI_laserPos;

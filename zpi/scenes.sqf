@@ -29,7 +29,8 @@ ZPI_fnc_scene_checkpoint = {
     private _h = [360] call ZPI_fnc_rand;
     if (!isNull _road) then {
         private _i = getRoadInfo _road;
-        _p = getPosATL _road; _p set [2, 0];
+        _p = getPosATL _road;
+        _p set [2, 0];
         _h = (_i select 6) getDir (_i select 7);
     };
     private _g = [ZPI_side] call ZPI_fnc_newGroup;
@@ -129,16 +130,26 @@ ZPI_fnc_convoyOf = {
     _g setSpeedMode "LIMITED";
     _g setBehaviour "SAFE";
     _g setCombatMode "BLUE";
-    { _x forceFollowRoad true; _x setConvoySeparation _spacing; _x limitSpeed ZPI_cfg_convoySpeed } forEach _veh;
+    {
+        _x forceFollowRoad true;
+        _x setConvoySeparation _spacing;
+        _x limitSpeed ZPI_cfg_convoySpeed
+    } forEach _veh;
     [_g, [(_fwd select (count _fwd - 1)) select 0, (_back select 0) select 0], true] call ZPI_fnc_addWaypoints;
 };
 
-ZPI_fnc_scene_convoy = { params ["_c"]; [_c, ["W", "T", "T", "W", "T", "W"], 30] call ZPI_fnc_convoyOf };
+ZPI_fnc_scene_convoy = {
+    params ["_c"];
+    [_c, ["W", "T", "T", "W", "T", "W"], 30] call ZPI_fnc_convoyOf;
+};
 
 // ---------------------------------------------------------------------
 // [ - column of 5 tanks / tracked APCs driving along a road
 // ---------------------------------------------------------------------
-ZPI_fnc_scene_tankColumn = { params ["_c"]; [_c, ["T", "T", "T", "T", "T"], 35] call ZPI_fnc_convoyOf };
+ZPI_fnc_scene_tankColumn = {
+    params ["_c"];
+    [_c, ["T", "T", "T", "T", "T"], 35] call ZPI_fnc_convoyOf;
+};
 
 // ---------------------------------------------------------------------
 // Shift+5 - column of 4-5 tanks driving across open fields (no road, no village)
@@ -174,7 +185,10 @@ ZPI_fnc_scene_fieldColumn = {
     _g setSpeedMode "LIMITED";
     _g setBehaviour "SAFE";
     _g setCombatMode "BLUE";
-    { _x setConvoySeparation 30; _x limitSpeed ZPI_cfg_convoySpeed } forEach _veh;
+    {
+        _x setConvoySeparation 30;
+        _x limitSpeed ZPI_cfg_convoySpeed;
+    } forEach _veh;
     [_g, [[_end select 0, _end select 1, 0], [_p select 0, _p select 1, 0]], true] call ZPI_fnc_addWaypoints;
     ["field_column", format ['{"vehicles":%1,"heading":%2,"start":%3,"end":%4}', count _veh, _hh toFixed 0, [_p, 1] call ZPI_fnc_v3, [_end, 1] call ZPI_fnc_v3]] call ZPI_fnc_event;
 };
@@ -187,7 +201,8 @@ ZPI_fnc_scene_squadsSplit = {
     params ["_c"];
     private _p = [_c, 450] call ZPI_fnc_findOpen;
     private _forest = (selectBestPlaces [_p, 700, "forest + trees - houses - (10 * sea)", 25, 6]) apply {
-        private _q = _x select 0; [_q select 0, _q select 1, 0]
+        private _q = _x select 0;
+        [_q select 0, _q select 1, 0]
     };
     if (_forest isEqualTo []) then { _forest = [[_p, [360] call ZPI_fnc_rand, 0, 300] call ZPI_fnc_rel] };
     // walk roughly towards the forest
@@ -283,7 +298,8 @@ ZPI_fnc_scene_village = {
     private _pick = [_c, 0, false, 600] call ZPI_fnc_findEntryBuildings;
     private _bld = [];
     if (_pick isNotEqualTo []) then {
-        _c = getPosATL (_pick select 0); _c set [2, 0];
+        _c = getPosATL (_pick select 0);
+        _c set [2, 0];
         _bld = ([_c, 70] call ZPI_fnc_buildingsNear) select {
             private _bb = boundingBoxReal _x;
             (((_bb select 1) select 0) - ((_bb select 0) select 0)) > 5
@@ -296,7 +312,8 @@ ZPI_fnc_scene_village = {
         private _b = [_bld] call ZPI_fnc_pick;
         _bld = _bld - [_b];
         private _bb = boundingBoxReal _b;
-        private _mn = _bb select 0; private _mx = _bb select 1;
+        private _mn = _bb select 0;
+        private _mx = _bb select 1;
         private _cx = ((_mx select 0) + (_mn select 0)) / 2;
         private _cy = ((_mx select 1) + (_mn select 1)) / 2;
         private _hx = ((_mx select 0) - (_mn select 0)) / 2;
@@ -430,17 +447,20 @@ ZPI_buildingWatch = [];          // [[building, units, lastInsideCount]]
 // the wall facing _from. -> [doorATL, outward unit vector]
 ZPI_fnc_doorOf = {
     params ["_b", "_from"];
-    private _c = getPosATL _b; _c set [2, 0];
+    private _c = getPosATL _b;
+    _c set [2, 0];
     private _d = _b buildingExit 0;
     if (_d isEqualTo [0, 0, 0] || {(_d distance2D _c) > 40}) then {
         private _bb = boundingBoxReal _b;
-        private _mn = _bb select 0; private _mx = _bb select 1;
+        private _mn = _bb select 0;
+        private _mx = _bb select 1;
         private _mc = (_mn vectorAdd _mx) vectorMultiply 0.5;
         private _f = _b worldToModel [_from select 0, _from select 1, 0];
         private _dx = (_f select 0) - (_mc select 0);
         private _dy = (_f select 1) - (_mc select 1);
         private _l = (sqrt (_dx * _dx + _dy * _dy)) max 0.01;
-        _dx = _dx / _l; _dy = _dy / _l;
+        _dx = _dx / _l;
+        _dy = _dy / _l;
         private _t = ((((_mx select 0) - (_mn select 0)) / 2) / ((abs _dx) max 0.001)) min ((((_mx select 1) - (_mn select 1)) / 2) / ((abs _dy) max 0.001));
         private _w = _b modelToWorld [(_mc select 0) + _dx * _t, (_mc select 1) + _dy * _t, 0];
         _d = [_w select 0, _w select 1, 0];
@@ -476,7 +496,10 @@ ZPI_fnc_entryScene = {
         private _d = _bestDir + _k * 60;
         private _q = _ctr getPos [_approach max 20, _d];
         private _sc = ([_q, 25] call ZPI_fnc_greenScore) - 0.5 * (count ([_q, 25] call ZPI_fnc_buildingsNear));
-        if (!surfaceIsWater _q && {_sc > _bestScore}) then { _bestScore = _sc; _bestDir = _d };
+        if (!surfaceIsWater _q && {_sc > _bestScore}) then {
+            _bestScore = _sc;
+            _bestDir = _d;
+        };
     };
     private _from = _ctr getPos [60, _bestDir];
     private _doors = _bs apply { [_x, _from] call ZPI_fnc_doorOf };
@@ -530,7 +553,11 @@ ZPI_fnc_entryScene = {
         _idx = _idx + 1;
     };
     _units append _outside;
-    { _x setBehaviour "AWARE"; _x setSpeedMode _speed; _x setCombatMode "BLUE" } forEach ((_teams apply { group ((_x select 1) select 0) }) + [_gOut]);
+    {
+        _x setBehaviour "AWARE";
+        _x setSpeedMode _speed;
+        _x setCombatMode "BLUE";
+    } forEach ((_teams apply { group ((_x select 1) select 0) }) + [_gOut]);
 
     if (_vehKey != "") then {
         private _vp = [_start, _face, 1, -10] call ZPI_fnc_rel;
@@ -692,7 +719,10 @@ ZPI_fnc_scene_tankFiring = {
 // ---------------------------------------------------------------------
 // Shift+7 - long armour column: 7 tanks / tracked APCs close together on a country road
 // ---------------------------------------------------------------------
-ZPI_fnc_scene_longColumn = { params ["_c"]; [_c, ["T", "T", "T", "T", "T", "T", "T"], 26] call ZPI_fnc_convoyOf };
+ZPI_fnc_scene_longColumn = {
+    params ["_c"];
+    [_c, ["T", "T", "T", "T", "T", "T", "T"], 26] call ZPI_fnc_convoyOf;
+};
 
 // ---------------------------------------------------------------------
 // Shift+8 - patrol across the fields: a squad of 8 in a line, wedge or staggered column,
@@ -876,7 +906,10 @@ ZPI_fnc_scene_tankEscort = {
     // pacing: every 0.5 s match the tank's speed to the soldiers' and pull it back level with them
     [_tank, units _g, _p, _h, ZPI_sceneToken] spawn {
         params ["_tank", "_men", "_p", "_h", "_tok"];
-        private _fwd = { params ["_q"]; ((_q select 0) - (_p select 0)) * (sin _h) + ((_q select 1) - (_p select 1)) * (cos _h) };
+        private _fwd = {
+            params ["_q"];
+            ((_q select 0) - (_p select 0)) * (sin _h) + ((_q select 1) - (_p select 1)) * (cos _h);
+        };
         private _last = -1;
         while { ZPI_sceneToken == _tok && {alive _tank} } do {
             private _alive = _men select { alive _x };
@@ -894,7 +927,10 @@ ZPI_fnc_scene_tankEscort = {
     [_g, _tank, _tg, _p, _h, _rally, ZPI_sceneToken] spawn {
         params ["_g", "_tank", "_tg", "_p", "_h", "_rally", "_tok"];
         private _t = time + 20;
-        waitUntil { sleep 0.5; ZPI_sceneToken != _tok || {time > _t} || {((leader _g) distance2D _rally) < 15} };
+        waitUntil {
+            sleep 0.5;
+            ZPI_sceneToken != _tok || {time > _t} || {((leader _g) distance2D _rally) < 15}
+        };
         if (ZPI_sceneToken != _tok) exitWith {};        // scene was cleared / replaced
         private _g2 = [side _g] call ZPI_fnc_newGroup;
         ((units _g) select [3, 3]) joinSilent _g2;
@@ -960,7 +996,10 @@ ZPI_fnc_scene_infantrySpread = {
 // ---------------------------------------------------------------------
 // Shift+\ - wheeled convoy: 5 MRAPs / trucks / wheeled APCs on a country road
 // ---------------------------------------------------------------------
-ZPI_fnc_scene_wheeledConvoy = { params ["_c"]; [_c, ["W", "W", "W", "W", "W"], 30] call ZPI_fnc_convoyOf };
+ZPI_fnc_scene_wheeledConvoy = {
+    params ["_c"];
+    [_c, ["W", "W", "W", "W", "W"], 30] call ZPI_fnc_convoyOf;
+};
 
 // ---------------------------------------------------------------------
 // Shift+; - motor pool: 4-6 wheeled vehicles parked in the open (rows, herringbone or

@@ -65,7 +65,8 @@ ZPI_fnc_findEntryBuildings = {
     private _scored = [];
     {
         private _b = _x;
-        private _p = getPosATL _b; _p set [2, 0];
+        private _p = getPosATL _b;
+        _p set [2, 0];
         if (!_pair) then {
             private _near = count ([_p, _nearR] call ZPI_fnc_buildingsNear);
             if (_near <= _maxNear) then {
@@ -127,7 +128,8 @@ ZPI_fnc_siteRoad = {
     };
     _roads = (_roads call BIS_fnc_arrayShuffle) select [0, 250];
     private _sc = _roads apply {
-        private _p = getPosATL _x; _p set [2, 0];
+        private _p = getPosATL _x;
+        _p set [2, 0];
         [[_p, 100] call ZPI_fnc_greenScore, 0, _x]
     };
     { _x set [1, _forEachIndex] } forEach _sc;
@@ -135,7 +137,8 @@ ZPI_fnc_siteRoad = {
     private _out = [];
     {
         private _r = _x select 2;
-        private _p = getPosATL _r; _p set [2, 0];
+        private _p = getPosATL _r;
+        _p set [2, 0];
         if ((count ([_p, 200] call ZPI_fnc_buildingsNear)) <= ZPI_cfg_siteMaxBuildings
             && {_needPath <= 0 || {(count ([_r, _needPath, 35, true] call ZPI_fnc_roadPath)) >= _needPath}}) then {
             _out pushBack [_x select 0, _p];
@@ -154,7 +157,12 @@ ZPI_fnc_tourSite = {
     private _what = "";
     switch (true) do {
         case (_scene in [7, 10, 13, 14, 15, 16, 22]): {
-            private _need = switch (_scene) do { case 7: { 0 }; case 10: { 4 }; case 15: { 2 }; default { 3 } };
+            private _need = switch (_scene) do {
+                case 7: { 0 };
+                case 10: { 4 };
+                case 15: { 2 };
+                default { 3 };
+            };
             private _b = if (_scene == 22) then {
                 [_anchor, _need, false, _R, 1, ZPI_cfg_loneRadius] call ZPI_fnc_findEntryBuildings
             } else {
@@ -169,12 +177,24 @@ ZPI_fnc_tourSite = {
             };
         };
         case (_scene in [1, 2, 4, 9, 11, 19, 21, 26]): {
-            private _r = [_anchor, _R, switch (true) do { case (_scene == 19): { 8 }; case (_scene in [4, 11, 21, 26]): { 6 }; default { 0 } }] call ZPI_fnc_siteRoad;
-            if (_r isNotEqualTo []) then { (selectRandom _r) params ["_g", "_p"]; _site = _p; _what = "road" };
+            private _r = [_anchor, _R, switch (true) do {
+                case (_scene == 19): { 8 };
+                case (_scene in [4, 11, 21, 26]): { 6 };
+                default { 0 };
+            }] call ZPI_fnc_siteRoad;
+            if (_r isNotEqualTo []) then {
+                (selectRandom _r) params ["_g", "_p"];
+                _site = _p;
+                _what = "road";
+            };
         };
         default {
             private _o = [_anchor, _R] call ZPI_fnc_siteOpen;
-            if (_o isNotEqualTo []) then { (selectRandom _o) params ["_g", "_p"]; _site = _p; _what = "open" };
+            if (_o isNotEqualTo []) then {
+                (selectRandom _o) params ["_g", "_p"];
+                _site = _p;
+                _what = "open";
+            };
         };
     };
     if (_site isEqualTo []) exitWith {

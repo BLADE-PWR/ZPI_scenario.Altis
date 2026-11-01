@@ -174,7 +174,8 @@ ZPI_fnc_findRoad = {
     _sorted sort true;
     private _good = [];
     {
-        private _p = getPosATL (_x select 1); _p set [2, 0];
+        private _p = getPosATL (_x select 1);
+        _p set [2, 0];
         if ((count ([_p, 150] call ZPI_fnc_buildingsNear)) <= ZPI_cfg_siteMaxBuildings) then {
             _good pushBack [([_p, 60] call ZPI_fnc_greenScore) - (_x select 0) / (_radius * 4), _forEachIndex, _x select 1];
         };
@@ -190,7 +191,8 @@ ZPI_fnc_findRoad = {
 ZPI_fnc_roadPath = {
     params ["_road", "_count", "_spacing", ["_reverse", false]];
     private _i = getRoadInfo _road;
-    private _p = getPosATL _road; _p set [2, 0];
+    private _p = getPosATL _road;
+    _p set [2, 0];
     private _h = (_i select 6) getDir (_i select 7);
     if (_reverse) then { _h = (_h + 180) mod 360 };
     private _out = [[_p, _h]];
@@ -207,7 +209,8 @@ ZPI_fnc_roadPath = {
         if (!isOnRoad _q) then { _q = getPosATL _r };
         _q set [2, 0];
         if (_q distance2D _p < _spacing * 0.4) exitWith {};   // stuck (dead end / junction)
-        _p = _q; _h = _rh;
+        _p = _q;
+        _h = _rh;
         _out pushBack [_p, _h];
     };
     _out

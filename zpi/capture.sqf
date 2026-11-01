@@ -45,13 +45,18 @@ ZPI_fnc_projectN = {
 // [points ASL] -> [x0, y0, x1, y1] normalized, unclipped; [] if any point is behind
 ZPI_fnc_boxOfPoints = {
     params ["_pts", "_basis", "_th", "_tv"];
-    private _x0 = 1e9; private _y0 = 1e9; private _x1 = -1e9; private _y1 = -1e9;
+    private _x0 = 1e9;
+    private _y0 = 1e9;
+    private _x1 = -1e9;
+    private _y1 = -1e9;
     private _ok = true;
     {
         private _s = [_x, _basis, _th, _tv] call ZPI_fnc_projectN;
         if (_s isEqualTo []) exitWith { _ok = false };
-        _x0 = _x0 min (_s select 0); _x1 = _x1 max (_s select 0);
-        _y0 = _y0 min (_s select 1); _y1 = _y1 max (_s select 1);
+        _x0 = _x0 min (_s select 0);
+        _x1 = _x1 max (_s select 0);
+        _y0 = _y0 min (_s select 1);
+        _y1 = _y1 max (_s select 1);
     } forEach _pts;
     if (!_ok) exitWith { [] };
     [_x0, _y0, _x1, _y1]
@@ -73,7 +78,15 @@ ZPI_fnc_corners = {             // 8 corners of a model-space box -> world ASL
 ZPI_fnc_worldBoxCorners = {     // axis-aligned world box around a point
     params ["_p", "_rx", "_z0", "_z1"];
     private _out = [];
-    { private _dx = _x; { private _dy = _x; { _out pushBack (_p vectorAdd [_dx, _dy, _x]) } forEach [_z0, _z1] } forEach [-_rx, _rx] } forEach [-_rx, _rx];
+    {
+        private _dx = _x;
+        {
+            private _dy = _x;
+            {
+                _out pushBack (_p vectorAdd [_dx, _dy, _x])
+            } forEach [_z0, _z1]
+        } forEach [-_rx, _rx]
+    } forEach [-_rx, _rx];
     _out
 };
 
@@ -81,7 +94,9 @@ ZPI_fnc_worldBoxCorners = {     // axis-aligned world box around a point
 // (standing, kneeling and prone all get a tight box). Fallback: boundingBoxReal.
 ZPI_fnc_soldierBox = {
     params ["_u"];
-    private _mn = [1e9, 1e9, 1e9]; private _mx = [-1e9, -1e9, -1e9]; private _n = 0;
+    private _mn = [1e9, 1e9, 1e9];
+    private _mx = [-1e9, -1e9, -1e9];
+    private _n = 0;
     {
         private _bb = _u selectionPosition [_x, "HitPoints", "BoundingBox"];
         if (_bb isEqualType [] && {count _bb == 2} && {(_bb select 0) isEqualType []} && {(_bb select 0) isNotEqualTo (_bb select 1)}) then {
@@ -155,7 +170,10 @@ ZPI_fnc_soldierBox2D = {
     if (count _parts < 2) exitWith { [[], ""] };
     private _pad = ZPI_cfg_soldierPartPad;
     private _pack = (backpack _u) != "";
-    private _x0 = 1e9; private _y0 = 1e9; private _x1 = -1e9; private _y1 = -1e9;
+    private _x0 = 1e9;
+    private _y0 = 1e9;
+    private _x1 = -1e9;
+    private _y1 = -1e9;
     private _ok = true;
     {
         _x params ["_name", "_mn", "_mx"];
@@ -166,8 +184,10 @@ ZPI_fnc_soldierBox2D = {
         if (_pack && {_name in ["spine2", "spine3", "body"]}) then { _mn = _mn vectorAdd [0, -ZPI_cfg_soldierBackpack, 0] };
         private _b = [[_u, _mn, _mx] call ZPI_fnc_corners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
         if (_b isEqualTo []) exitWith { _ok = false };
-        _x0 = _x0 min (_b select 0); _y0 = _y0 min (_b select 1);
-        _x1 = _x1 max (_b select 2); _y1 = _y1 max (_b select 3);
+        _x0 = _x0 min (_b select 0);
+        _y0 = _y0 min (_b select 1);
+        _x1 = _x1 max (_b select 2);
+        _y1 = _y1 max (_b select 3);
     } forEach _parts;
     if (!_ok) exitWith { [[], ""] };
     [[_x0, _y0, _x1, _y1], _meth]
@@ -193,7 +213,8 @@ ZPI_fnc_vehicleBox = {
         ["view",     { boundingBoxReal [_v, "ViewGeometry"] }],
         ["geomlod",  { boundingBoxReal [_v, "Geometry"] }]
     ];
-    private _mn = [-1e9, -1e9, -1e9]; private _mx = [1e9, 1e9, 1e9];
+    private _mn = [-1e9, -1e9, -1e9];
+    private _mx = [1e9, 1e9, 1e9];
     private _used = [];
     {
         _x params ["_name", "_bb"];
@@ -208,7 +229,9 @@ ZPI_fnc_vehicleBox = {
     } forEach _cands;
     if (_used isEqualTo [] || {(_mx select 0) <= (_mn select 0)} || {(_mx select 1) <= (_mn select 1)} || {(_mx select 2) <= (_mn select 2)}) then {
         private _bb = boundingBoxReal _v;
-        _mn = _bb select 0; _mx = _bb select 1; _used = ["fallback"];
+        _mn = _bb select 0;
+        _mx = _bb select 1;
+        _used = ["fallback"];
     };
     // one log line per vehicle type, so the boxes can be checked
     ["vbox", format ['{"class":"%1","used":%2,"result":[%3,%4],"candidates":[%5]}', _key, str _used,
@@ -261,7 +284,10 @@ ZPI_fnc_finishBox = {
     _box params ["_x0", "_y0", "_x1", "_y1"];
     private _area = (_x1 - _x0) * (_y1 - _y0);
     if (_area <= 0) exitWith { "" };
-    private _cx0 = _x0 max 0; private _cy0 = _y0 max 0; private _cx1 = _x1 min 1; private _cy1 = _y1 min 1;
+    private _cx0 = _x0 max 0;
+    private _cy0 = _y0 max 0;
+    private _cx1 = _x1 min 1;
+    private _cy1 = _y1 min 1;
     if (_cx1 <= _cx0 || {_cy1 <= _cy0}) exitWith { "" };            // completely outside
     private _inFrac = ((_cx1 - _cx0) * (_cy1 - _cy0)) / _area;
     if (_inFrac < ZPI_cfg_minInFrame) exitWith { "" };               // mostly outside the image
@@ -290,7 +316,8 @@ ZPI_fnc_computeLabels = {
     private _th = tan (ZPI_hfov / 2);
     private _tv = tan (ZPI_vfov / 2);
     private _res = getResolution;
-    private _W = _res select 0; private _H = _res select 1;
+    private _W = _res select 0;
+    private _H = _res select 1;
     private _boxes = [];
 
     // soldiers and vehicles
@@ -304,7 +331,11 @@ ZPI_fnc_computeLabels = {
             private _meth = "";
             if (_kind == "s" && {_box isNotEqualTo []} && {ZPI_cfg_soldierTightBox}) then {
                 ([_obj, [_mn, _mx], _basis, _th, _tv] call ZPI_fnc_soldierBox2D) params ["_tb", "_tm"];
-                if (_tb isNotEqualTo []) then { _old = _box; _box = _tb; _meth = _tm };
+                if (_tb isNotEqualTo []) then {
+                    _old = _box;
+                    _box = _tb;
+                    _meth = _tm;
+                };
             };
             if (_box isNotEqualTo []) then {
                 // sample points: center + 4 points around it at 60 % of the box, mid height
@@ -472,10 +503,15 @@ ZPI_fnc_logTerrain = {
     if (_hits isEqualTo []) exitWith {};
     private _xs = _hits apply { _x select 0 };
     private _ys = _hits apply { _x select 1 };
-    private _x0 = selectMin _xs; private _x1 = selectMax _xs;
-    private _y0 = selectMin _ys; private _y1 = selectMax _ys;
+    private _x0 = selectMin _xs;
+    private _x1 = selectMax _xs;
+    private _y0 = selectMin _ys;
+    private _y1 = selectMax _ys;
     private _m = ((((_x1 - _x0) max (_y1 - _y0)) * 0.1) max 10);
-    _x0 = _x0 - _m; _x1 = _x1 + _m; _y0 = _y0 - _m; _y1 = _y1 + _m;
+    _x0 = _x0 - _m;
+    _x1 = _x1 + _m;
+    _y0 = _y0 - _m;
+    _y1 = _y1 + _m;
     private _d = ((((_x1 - _x0) max (_y1 - _y0)) / 32) max 2);
     private _nx = (ceil ((_x1 - _x0) / _d) + 1) min 33;
     private _ny = (ceil ((_y1 - _y0) / _d) + 1) min 33;
@@ -673,7 +709,9 @@ ZPI_fnc_takeRef = {             // [impact posASL] -> true if a reference was ta
     waitUntil { diag_frameNo > _f0 + 2 };
     private _file = format ["ref_%1.png", [diag_frameNo, 8] call ZPI_fnc_pad];
     if (!(screenshot (format ["zpi\%1\%2", ZPI_sessionTag, _file]))) exitWith {
-        ZPI_camLock = false; ZPI_fovLock = false; false
+        ZPI_camLock = false;
+        ZPI_fovLock = false;
+        false
     };
     ZPI_refImage = format ["zpi/%1/%2", ZPI_sessionTag, _file];
     ZPI_refUntil = time + ZPI_cfg_refTimeout;
@@ -865,10 +903,16 @@ ZPI_fnc_vehFire = {
         while { _fired < _shots && {time < _deadline} && {alive _v} } do {
             waitUntil { !ZPI_frozen };
             // the flash and flames of the previous shot must be gone before the reference picture
-            waitUntil { sleep 0.1; time > (_v getVariable ["ZPI_firedAt", -10]) + 2 };
+            waitUntil {
+                sleep 0.1;
+                time > (_v getVariable ["ZPI_firedAt", -10]) + 2
+            };
             // hold the camera for the measured picture: the impact if it is in view, else the firing tank
             if !([_tgt] call ZPI_fnc_takeRef) then { [getPosASL _v] call ZPI_fnc_takeRef };
-            if ([_v, _g, _opt, _method] call ZPI_fnc_tryFire) then { _fired = _fired + 1; sleep (0.8 + random 1.5) } else { sleep 0.4 };
+            if ([_v, _g, _opt, _method] call ZPI_fnc_tryFire) then {
+                _fired = _fired + 1;
+                sleep (0.8 + random 1.5)
+            } else { sleep 0.4 };
         };
     };
     _g doWatch objNull;

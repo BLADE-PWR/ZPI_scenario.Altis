@@ -62,7 +62,10 @@ ZPI_fnc_tourLead = {
     if (_objs isEqualTo []) exitWith { [] };
     private _c = [0, 0, 0];
     private _v = [0, 0, 0];
-    { _c = _c vectorAdd (getPosASL _x); _v = _v vectorAdd (velocity _x) } forEach _objs;
+    {
+        _c = _c vectorAdd (getPosASL _x);
+        _v = _v vectorAdd (velocity _x);
+    } forEach _objs;
     _c = _c vectorMultiply (1 / (count _objs));
     _v = _v vectorMultiply (1 / (count _objs));
     _v set [2, 0];
@@ -142,7 +145,10 @@ ZPI_fnc_tourExplosion = {
     if (!_ok || {ZPI_tourStop}) exitWith {};
     private _ammo = ([ZPI_cfg_barrageAmmo, "CfgAmmo"] call ZPI_fnc_validClasses) param [0, "Sh_82mm_AMOS"];
     private _ref = "";
-    if ([_p] call ZPI_fnc_takeRef) then { _ref = ZPI_refImage; sleep 0.15 };
+    if ([_p] call ZPI_fnc_takeRef) then {
+        _ref = ZPI_refImage;
+        sleep 0.15;
+    };
     private _before = ZPI_shotCount;
     ZPI_expId = ZPI_expId + 1;
     private _sh = createVehicle [_ammo, [_p select 0, _p select 1, 60], [], 0, "CAN_COLLIDE"];
@@ -158,7 +164,10 @@ ZPI_fnc_tourExplosion = {
     // the explosion triggers the first picture by itself (0.35 s after it); more pictures of the same
     // explosion (ZPI_cfg_tourExplosionFrames) from the unchanged view, with the same reference picture
     private _t0 = time;
-    waitUntil { sleep 0.05; ZPI_shotCount > _before || {time > _t0 + 4} };
+    waitUntil {
+        sleep 0.05;
+        ZPI_shotCount > _before || {time > _t0 + 4}
+    };
     if (ZPI_cfg_tourExplosionFrames > 1 && {ZPI_shotCount > _before} && {_ref != ""}) then {
         private _t1 = time;
         for "_k" from 2 to ZPI_cfg_tourExplosionFrames do {
@@ -171,7 +180,10 @@ ZPI_fnc_tourExplosion = {
             ZPI_refUntil = time + 3;
             private _b2 = ZPI_shotCount;
             call ZPI_fnc_startCapture;
-            waitUntil { sleep 0.05; (ZPI_capState == 0 && {ZPI_shotCount > _b2}) || {time > _t1 + 6} };
+            waitUntil {
+                sleep 0.05;
+                (ZPI_capState == 0 && {ZPI_shotCount > _b2}) || {time > _t1 + 6}
+            };
         };
     };
     sleep 1;
@@ -237,7 +249,10 @@ ZPI_fnc_tourFiring = {
     private _before = ZPI_shotCount;
     private _t0 = time;
     [_t, 1] spawn ZPI_fnc_vehFire;
-    waitUntil { sleep 0.1; ZPI_shotCount > _before || {time > _t0 + 25} };
+    waitUntil {
+        sleep 0.1;
+        ZPI_shotCount > _before || {time > _t0 + 25}
+    };
     if (ZPI_shotCount > _before) then {
         for "_k" from 1 to _extra do {
             sleep 0.6;
@@ -247,7 +262,10 @@ ZPI_fnc_tourFiring = {
             waitUntil { ZPI_capState == 0 };
         };
     };
-    waitUntil { sleep 0.2; !(_t getVariable ["ZPI_busy", false]) || {time > _t0 + 30} };
+    waitUntil {
+        sleep 0.2;
+        !(_t getVariable ["ZPI_busy", false]) || {time > _t0 + 30}
+    };
     ZPI_fovLock = false;
     ZPI_shotCount - _before
 };
@@ -276,7 +294,10 @@ ZPI_fnc_tourScene = {
     private _start = ZPI_shotCount;
     private _fails = 0;              // views that could not be shot (too many buildings, nothing left)
     private _more = { ((_n - (ZPI_shotCount - _start)) > 0) && {!(call ZPI_fnc_tourDone)} && {_fails < 6} };
-    private _len  = { params ["_max"]; (_max min (_n - (ZPI_shotCount - _start))) max 1 };
+    private _len  = {
+        params ["_max"];
+        (_max min (_n - (ZPI_shotCount - _start))) max 1
+    };
     private _shoot = {               // [target, gsd, pictures, view]
         private _k = _this call ZPI_fnc_tourBurst;
         if (_k == 0) then { _fails = _fails + 1 };
@@ -331,7 +352,8 @@ ZPI_fnc_tourScene = {
                 private _az = (getPosATL _b) getDir _stage;
                 private _ahead = ZPI_cfg_tourSettle + ZPI_cfg_burstInterval * (ZPI_cfg_burstShots - 1) / 2;
                 private _pts = (call ZPI_fnc_tourOutside) apply {
-                    private _v = velocity _x; _v set [2, 0];
+                    private _v = velocity _x;
+                    _v set [2, 0];
                     (getPosASL _x) vectorAdd (_v vectorMultiply _ahead)
                 };
                 private _doorASL = (AGLToASL _door) vectorAdd [0, 0, 1];
@@ -453,8 +475,10 @@ ZPI_fnc_tourRounds = {
             _firstRound = false;
             {
                 if (call ZPI_fnc_tourDone) exitWith {};
-                ZPI_timeIndex = ZPI_cfg_tourTime;       call ZPI_fnc_applyTime;
-                ZPI_weatherIndex = ZPI_cfg_tourWeather; call ZPI_fnc_applyWeather;
+                ZPI_timeIndex = ZPI_cfg_tourTime;
+                call ZPI_fnc_applyTime;
+                ZPI_weatherIndex = ZPI_cfg_tourWeather;
+                call ZPI_fnc_applyWeather;
                 ZPI_cfg_seed = ZPI_cfg_seed + 1;
                 profileNamespace setVariable ["ZPI_nextTourSeed", ZPI_cfg_seed + 1];
                 saveProfileNamespace;

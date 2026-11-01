@@ -30,7 +30,10 @@ ZPI_fnc_orthoCapture = {
         private _frozen = [];
         {
             private _o = _x select 1;
-            if (!isNull _o && {simulationEnabled _o}) then { _o enableSimulation false; _frozen pushBack _o };
+            if (!isNull _o && {simulationEnabled _o}) then {
+                _o enableSimulation false;
+                _frozen pushBack _o;
+            };
         } forEach ZPI_entities;
 
         // ---- zoom to the tile FOV ----
