@@ -23,7 +23,7 @@
 ZPI_yoloClasses = ["soldier", "tank", "military_vehicle", "explosion"];   // for the log only; classes are chosen in Python
 ZPI_clsToKind = createHashMapFromArray [["soldier", "s"], ["tracked_vehicle", "t"], ["wheeled_vehicle", "v"]];
 
-ZPI_capFrozen    = [];
+ZPI_capFrozenEntities = [];
 ZPI_capTaken     = false; // screenshot taken this capture; it is saved when its frame is rendered
 ZPI_autoCapture  = false;
 ZPI_autoInterval = 2;     // s between automatic captures
@@ -579,12 +579,12 @@ ZPI_burstLen = 0;
 ZPI_fnc_startCapture = {
     if (ZPI_frozen) exitWith {};
     ZPI_frozen = true;
-    ZPI_capFrozen = [];
+    ZPI_capFrozenEntities = [];
     {
         private _o = _x select 1;
         if (!isNull _o && {simulationEnabled _o} && {(vectorMagnitude (velocity _o)) > 0.05 || {!(_o isKindOf "Man")} || {!(isNull (objectParent _o))}}) then {
             _o enableSimulation false;
-            ZPI_capFrozen pushBack _o;
+            ZPI_capFrozenEntities pushBack _o;
         };
     } forEach ZPI_entities;
 };
@@ -597,10 +597,9 @@ ZPI_fnc_doCapture = {
     } else {
         format ["%1_%2.png", ZPI_sceneName, [diag_frameNo, 8] call ZPI_fnc_pad]
     };
-    private _name = format ["zpi\%1\%2", ZPI_sessionTag, _file];        // for the screenshot command
-    private _jsonName = format ["zpi/%1/%2", ZPI_sessionTag, _file];     // for the log (JSON has no bare backslashes)
+    private _img = format ["zpi/%1/%2", ZPI_sessionTag, _file];
     private _boxes = call ZPI_fnc_computeLabels;
-    private _ok = screenshot _name;
+    private _ok = screenshot _img;
     private _basis = call ZPI_fnc_camBasis;
     _basis params ["_o", "_r", "_u", "_f"];
     // attitude from the rendered camera axes (heading 0 = north, pitch < 0 = down, bank = roll)
@@ -617,7 +616,7 @@ ZPI_fnc_doCapture = {
     private _parts = (ceil ((count _boxes) / _n)) max 1;
 
     ["shot", format ['{"image":"%1","ok":%2,"frame":%3,"t_game":%4,"parts":%5,"res":[%6,%7],"cam":{"pos_asl":%8,"x_axis":%9,"y_axis":%10,"z_axis":%11,"hfov":%12,"vfov":%13,"hdg":%14,"pitch":%15,"alt_asl":%16,"alt_agl":%17,"grid":"%18","bank":%19,"fx":%20,"fy":%21,"proj_check_px":%22}}',
-        _jsonName, _ok, diag_frameNo toFixed 0, time toFixed 3, _parts, _W, _H,
+        _img, _ok, diag_frameNo toFixed 0, time toFixed 3, _parts, _W, _H,
         [_o, 3] call ZPI_fnc_v3, [_r, 7] call ZPI_fnc_v3, [_u, 7] call ZPI_fnc_v3, [_f, 7] call ZPI_fnc_v3,
         ZPI_hfov toFixed 6, ZPI_vfov toFixed 6, _hdg toFixed 4, _pitch toFixed 4, (_o select 2) toFixed 2, ((_o select 2) - _gz) toFixed 2,
         mapGridPosition [_o select 0, _o select 1], _bank toFixed 4,
@@ -630,18 +629,18 @@ ZPI_fnc_doCapture = {
     } else { "null" };
     private _ref = if (ZPI_camLock && {ZPI_refImage != ""}) then { ZPI_refImage } else { "" };
     ["shotx", format ['{"image":"%1","scene":"%2","seed":%3,"region":%4,"world":"%5","laser":%6,"time_label":"%7","daytime":%8,"weather":"%9","scale_lock":%10,"target_gsd":%11,"ref_image":"%12","occupancy":%13,"burst":%14,"burst_idx":%15,"burst_len":%16,"surface":"%17","fog":%18,"overcast":%19,"aperture":%20,"stage":"%21"}',
-        _jsonName, ZPI_sceneName, ZPI_cfg_seed, ZPI_regionId, worldName, _laser,
+        _img, ZPI_sceneName, ZPI_cfg_seed, ZPI_regionId, worldName, _laser,
         (ZPI_timePresets select ZPI_timeIndex) select 2, dayTime toFixed 3, (ZPI_weatherPresets select ZPI_weatherIndex) select 0,
         ZPI_scaleLock, ZPI_targetGSD toFixed 4, _ref, call ZPI_fnc_occupancyJson,
         [-1, ZPI_burstId] select (ZPI_burstIdx >= 0), ZPI_burstIdx, ZPI_burstLen,
         if (ZPI_laserRange > 0) then { surfaceType ZPI_laserPos } else { "" },
         str fogParams, overcast toFixed 3, apertureParams select 0, ZPI_tourStage]] call ZPI_fnc_emit;
 
-    [_jsonName, _basis, _th, _tv] call ZPI_fnc_logTerrain;   // DEM patch under the view
-    [_jsonName, _basis, _th, _tv] call ZPI_fnc_logRays;      // what each of 9 x 5 image points really hits
+    [_img, _basis, _th, _tv] call ZPI_fnc_logTerrain;   // DEM patch under the view
+    [_img, _basis, _th, _tv] call ZPI_fnc_logRays;      // what each of 9 x 5 image points really hits
     for "_k" from 0 to (_parts - 1) do {
         ["label", format ['{"image":"%1","part":%2,"parts":%3,"boxes":[%4]}',
-            _jsonName, _k, _parts, (_boxes select [_k * _n, _n]) joinString ","]] call ZPI_fnc_emit;
+            _img, _k, _parts, (_boxes select [_k * _n, _n]) joinString ","]] call ZPI_fnc_emit;
     };
     if (_ok) then {
         [format ["Shot %1: %2 boxes%3", ZPI_shotCount, count _boxes, ["", " (+ reference)"] select (_ref != "")]] call ZPI_fnc_msg;
@@ -651,8 +650,8 @@ ZPI_fnc_doCapture = {
 };
 
 ZPI_fnc_unfreeze = {
-    { if (!isNull _x) then { _x enableSimulation true } } forEach ZPI_capFrozen;
-    ZPI_capFrozen = [];
+    { if (!isNull _x) then { _x enableSimulation true } } forEach ZPI_capFrozenEntities;
+    ZPI_capFrozenEntities = [];
     ZPI_frozen = false;
     ZPI_mouseDX = 0;                 // drop mouse movement made during the freeze
     ZPI_mouseDY = 0;
@@ -710,13 +709,13 @@ ZPI_fnc_takeRef = {             // [impact posASL] -> true if a reference was ta
     ZPI_fovLock = true;
     private _f0 = diag_frameNo;
     waitUntil { diag_frameNo > _f0 };
-    private _file = format ["ref_%1.png", [diag_frameNo, 8] call ZPI_fnc_pad];
-    if (!(screenshot (format ["zpi\%1\%2", ZPI_sessionTag, _file]))) exitWith {
+    private _img = format ["zpi/%1/ref_%2.png", ZPI_sessionTag, [diag_frameNo, 8] call ZPI_fnc_pad];
+    if (!(screenshot _img)) exitWith {
         ZPI_camLock = false;
         ZPI_fovLock = false;
         false
     };
-    ZPI_refImage = format ["zpi/%1/%2", ZPI_sessionTag, _file];
+    ZPI_refImage = _img;
     ZPI_refUntil = time + ZPI_cfg_refTimeout;
     true
 };

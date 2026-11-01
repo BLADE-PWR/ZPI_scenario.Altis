@@ -70,11 +70,11 @@ ZPI_fnc_orthoCapture = {
                 sleep ZPI_cfg_orthoSettle;           // terrain and objects load in
                 private _f0 = diag_frameNo;
                 waitUntil { diag_frameNo > _f0 };
-                private _file = format ["tile_%1_%2.png", [_r, 2] call ZPI_fnc_pad, [_k, 2] call ZPI_fnc_pad];
-                private _ok = screenshot (format ["zpi\%1\ortho_%2\%3", ZPI_sessionTag, _tag, _file]);
+                private _img = format ["zpi/%1/ortho_%2/tile_%3_%4.png", ZPI_sessionTag, _tag, [_r, 2] call ZPI_fnc_pad, [_k, 2] call ZPI_fnc_pad];
+                private _ok = screenshot _img;
                 (call ZPI_fnc_camBasis) params ["_o", "_rx", "_uy", "_fz"];
-                ["otile", format ['{"ortho":"%1","image":"zpi/%2/ortho_%1/%3","ok":%4,"row":%5,"col":%6,"cam_pos_asl":%7,"ground_z":%8,"hfov":%9,"vfov":%10,"x_axis":%11,"y_axis":%12}',
-                    _tag, ZPI_sessionTag, _file, _ok, _r, _k, [_o, 2] call ZPI_fnc_v3, _gz toFixed 2,
+                ["otile", format ['{"ortho":"%1","image":"%2","ok":%4,"row":%5,"col":%6,"cam_pos_asl":%7,"ground_z":%8,"hfov":%9,"vfov":%10,"x_axis":%11,"y_axis":%12}',
+                    _tag, _img, _ok, _r, _k, [_o, 2] call ZPI_fnc_v3, _gz toFixed 2,
                     ZPI_hfov toFixed 4, ZPI_vfov toFixed 4, [_rx, 5] call ZPI_fnc_v3, [_uy, 5] call ZPI_fnc_v3]] call ZPI_fnc_emit;
                 _done = _done + 1;
                 if (_done % 5 == 0) then { [format ["Orthophoto: %1 / %2 tiles", _done, _nx * _ny]] call ZPI_fnc_msg };
