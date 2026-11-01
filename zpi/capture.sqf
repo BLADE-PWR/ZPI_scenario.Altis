@@ -7,8 +7,7 @@
 //
 //  How a capture works (all automatic):
 //    frame 0  freeze: camera stops, moving units are frozen
-//    frame 2  boxes from the game's own 3D geometry + screenshot, same frame
-//    frame 4  unfreeze
+//    frame 1  boxes from the game's own 3D geometry + screenshot, then unfreeze
 //  Log records per screenshot (one line each, kept short for the RPT):
 //    ZPI|shot|   image, camera pose + FOV + attitude + altitude
 //    ZPI|shotx|  laser rangefinder, scene, time, weather, explosion reference image, building occupancy
@@ -23,7 +22,6 @@
 ZPI_yoloClasses = ["soldier", "tank", "military_vehicle", "explosion"];   // for the log only; classes are chosen in Python
 ZPI_clsToKind = createHashMapFromArray [["soldier", "s"], ["tracked_vehicle", "t"], ["wheeled_vehicle", "v"]];
 
-ZPI_capState     = 0;
 ZPI_capFrozen    = [];
 ZPI_autoCapture  = false;
 ZPI_autoInterval = 2;     // s between automatic captures
@@ -577,7 +575,7 @@ ZPI_burstId  = 0;                // burst counter (generator); pictures of one b
 ZPI_burstIdx = -1;               // index inside the current burst, -1 = not in a burst
 ZPI_burstLen = 0;
 ZPI_fnc_startCapture = {
-    if (ZPI_capState > 0) exitWith {};
+    if (ZPI_frozen) exitWith {};
     ZPI_frozen = true;
     ZPI_capFrozen = [];
     {
@@ -587,7 +585,6 @@ ZPI_fnc_startCapture = {
             ZPI_capFrozen pushBack _o;
         };
     } forEach ZPI_entities;
-    ZPI_capState = 1;
 };
 
 ZPI_fnc_doCapture = {
@@ -664,16 +661,13 @@ ZPI_fnc_captureTick = {
     ZPI_explosions = ZPI_explosions select { (time - (_x select 1)) < (_x select 4) };
     ZPI_firings = ZPI_firings select { (time - (_x select 2)) < (_x select 5) };
     // a held camera is released when its explosion never came
-    if (ZPI_camLock && {ZPI_refImage != ""} && {time > ZPI_refUntil} && {ZPI_capState == 0}) then { call ZPI_fnc_releaseRef };
+    if (ZPI_camLock && {ZPI_refImage != ""} && {time > ZPI_refUntil} && {!ZPI_frozen}) then { call ZPI_fnc_releaseRef };
 
-    if (ZPI_capState > 0) then {
-        ZPI_capState = ZPI_capState + 1;
-        if (ZPI_capState == 2) then { call ZPI_fnc_doCapture };
-        if (ZPI_capState >= 2) then {
-            call ZPI_fnc_unfreeze;
-            ZPI_capState = 0;
-            if (ZPI_refImage != "") then { call ZPI_fnc_releaseRef };
-        };
+    if (ZPI_frozen) then {
+        // frozen since last frame: what is rendered now matches the frozen state
+        call ZPI_fnc_doCapture;
+        call ZPI_fnc_unfreeze;
+        if (ZPI_refImage != "") then { call ZPI_fnc_releaseRef };
     } else {
         if (ZPI_pendingCapture >= 0 && {time >= ZPI_pendingCapture}) exitWith {
             ZPI_pendingCapture = -1;
@@ -699,15 +693,15 @@ ZPI_fnc_toggleAuto = {
 ZPI_refImage = "";
 ZPI_refUntil = 0;
 
-// Scheduled code only (waits two frames so the held view is what gets rendered).
+// Scheduled code only (waits one frame so the held view is what gets rendered).
 ZPI_fnc_takeRef = {             // [impact posASL] -> true if a reference was taken
     params ["_target"];
-    if (!ZPI_cfg_explosionRefShots || {!ZPI_eventCapture} || {ZPI_camLock} || {ZPI_capState > 0}
+    if (!ZPI_cfg_explosionRefShots || {!ZPI_eventCapture} || {ZPI_camLock} || {ZPI_frozen}
         || {ZPI_pendingCapture >= 0} || {ZPI_orthoRunning} || {!([_target] call ZPI_fnc_onScreen)}) exitWith { false };
     ZPI_camLock = true;
     ZPI_fovLock = true;
     private _f0 = diag_frameNo;
-    waitUntil { diag_frameNo > _f0 + 2 };
+    waitUntil { diag_frameNo > _f0 };
     private _file = format ["ref_%1.png", [diag_frameNo, 8] call ZPI_fnc_pad];
     if (!(screenshot (format ["zpi\%1\%2", ZPI_sessionTag, _file]))) exitWith {
         ZPI_camLock = false;

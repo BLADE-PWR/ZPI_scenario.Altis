@@ -18,7 +18,7 @@ ZPI_orthoRunning = false;
 
 ZPI_fnc_orthoCapture = {
     if (ZPI_orthoRunning) exitWith { ["Orthophoto already running"] call ZPI_fnc_msg };
-    if (ZPI_capState > 0 || {ZPI_camLock}) exitWith { ["Busy (capture in progress), try again"] call ZPI_fnc_msg };
+    if (ZPI_frozen || {ZPI_camLock}) exitWith { ["Busy (capture in progress), try again"] call ZPI_fnc_msg };
     ZPI_orthoRunning = true;
     [] spawn {
         // ---- save the current view, hold everything still ----
@@ -68,7 +68,7 @@ ZPI_fnc_orthoCapture = {
                 call ZPI_fnc_applyCamPose;
                 sleep ZPI_cfg_orthoSettle;           // terrain and objects load in
                 private _f0 = diag_frameNo;
-                waitUntil { diag_frameNo > _f0 + 2 };
+                waitUntil { diag_frameNo > _f0 };
                 private _file = format ["tile_%1_%2.png", [_r, 2] call ZPI_fnc_pad, [_k, 2] call ZPI_fnc_pad];
                 private _ok = screenshot (format ["zpi\%1\ortho_%2\%3", ZPI_sessionTag, _tag, _file]);
                 (call ZPI_fnc_camBasis) params ["_o", "_rx", "_uy", "_fz"];

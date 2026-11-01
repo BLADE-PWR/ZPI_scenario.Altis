@@ -220,7 +220,7 @@ Each JSON records `gsd_center_m_per_px`, `scale_lock` and `target_gsd`, so you c
 
 **Soldier boxes (tight).** Earlier versions labelled a soldier with *one* 3D box around his body, projected into the picture. Seen from above at an angle, the near-bottom corners of that box land below his feet, so the box was loose at the bottom (10–40 % of its height below the feet) and a bit too wide. Now every body part of the visible model (head, upper arms, forearms, hands, thighs, shins, feet, toes, …) has its own small box; their corners are projected and the label is the union, which hugs the silhouette. A helmet (+8 cm) and a backpack (+22 cm behind the back) are added, rifles are not. If the game does not give animated body parts, the hit-point parts are used instead (bigger, still much tighter). Each soldier in the JSON says `"box_method"`: `body_parts`, `hit_point_parts`, `corrected_3d_box` (older picture, corrected, see Building the dataset) or `3d_box` (older picture, uncorrected). `ZPI_cfg_soldierTightBox = false` goes back to the old box.
 
-When you press **P**, the scene freezes for 2 frames. Boxes are computed from the game's 3D geometry and the screenshot is taken in the same frame. The filters stay as before: an object needs to be ≥ 30 % visible, ≥ 4 px, and mostly inside the image. Civilians and wrecks never get a box.
+When you press **p**, the scene freezes for one frame. Boxes are computed from the game's 3D geometry and the screenshot is taken in that frame, then the scene unfreezes. An object to be detected needs to be ≥ 30 % visible, ≥ 4 px, and mostly inside the image. Civilians and wrecks never get a box.
 
 The class names are chosen when the dataset is built (`--classes`), so you never need to retake screenshots to change them:
 

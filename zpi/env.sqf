@@ -111,7 +111,7 @@ ZPI_fnc_barrage = {
             private _z = getTerrainHeightASL _x;
             // wait for the previous explosion picture, then hold the camera and take the reference
             private _t0 = time;
-            waitUntil { (ZPI_capState == 0 && {!ZPI_camLock} && {ZPI_pendingCapture < 0}) || {time > _t0 + 6} };
+            waitUntil { (!ZPI_frozen && {!ZPI_camLock} && {ZPI_pendingCapture < 0}) || {time > _t0 + 6} };
             if ([[_x select 0, _x select 1, _z]] call ZPI_fnc_takeRef) then { sleep 0.15 };
             ZPI_expId = ZPI_expId + 1;
             private _sh = createVehicle [_ammo, [_x select 0, _x select 1, 60], [], 0, "CAN_COLLIDE"];

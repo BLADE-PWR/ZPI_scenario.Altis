@@ -46,7 +46,7 @@ ZPI_fnc_tourAim = {             // [targetASL, azimuth (camera side), elevation 
 
 ZPI_fnc_tourWaitIdle = {
     private _t0 = time;
-    waitUntil { (ZPI_capState == 0 && {!ZPI_camLock} && {ZPI_pendingCapture < 0}) || {time > _t0 + 8} };
+    waitUntil { (!ZPI_frozen && {!ZPI_camLock} && {ZPI_pendingCapture < 0}) || {time > _t0 + 8} };
 };
 
 ZPI_fnc_tourDone = { ZPI_tourStop || {(ZPI_shotCount - ZPI_tourStart) >= ZPI_tourTarget} };
@@ -115,7 +115,7 @@ ZPI_fnc_tourBurst = {
         private _before = ZPI_shotCount;
         call ZPI_fnc_startCapture;
         private _tw = time;
-        waitUntil { (ZPI_capState == 0 && {ZPI_shotCount > _before}) || {time > _tw + 3} };
+        waitUntil { (!ZPI_frozen && {ZPI_shotCount > _before}) || {time > _tw + 3} };
         _taken = _taken + (ZPI_shotCount - _before);
         ZPI_burstIdx = -1;
         if (_k < _shots - 1) then { waitUntil { time >= _t0 + (_k + 1) * ZPI_cfg_burstInterval } };
@@ -172,7 +172,7 @@ ZPI_fnc_tourExplosion = {
         private _t1 = time;
         for "_k" from 2 to ZPI_cfg_tourExplosionFrames do {
             if (ZPI_tourStop) exitWith {};
-            waitUntil { ZPI_capState == 0 };
+            waitUntil { !ZPI_frozen };
             waitUntil { time >= _t1 + 0.95 * (_k - 1) };
             ZPI_refImage = _ref;
             ZPI_camLock = true;
@@ -182,7 +182,7 @@ ZPI_fnc_tourExplosion = {
             call ZPI_fnc_startCapture;
             waitUntil {
                 sleep 0.05;
-                (ZPI_capState == 0 && {ZPI_shotCount > _b2}) || {time > _t1 + 6}
+                (!ZPI_frozen && {ZPI_shotCount > _b2}) || {time > _t1 + 6}
             };
         };
     };
@@ -256,10 +256,10 @@ ZPI_fnc_tourFiring = {
     if (ZPI_shotCount > _before) then {
         for "_k" from 1 to _extra do {
             sleep 0.6;
-            waitUntil { ZPI_capState == 0 };
+            waitUntil { !ZPI_frozen };
             call ZPI_fnc_startCapture;
             sleep 0.2;
-            waitUntil { ZPI_capState == 0 };
+            waitUntil { !ZPI_frozen };
         };
     };
     waitUntil {
