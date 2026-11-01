@@ -556,7 +556,7 @@ ZPI_fnc_tourDataset = {
     } forEach _plan;
     { missionNamespace setVariable [_x, _y] } forEach _saved;
     ZPI_tourStage = "";
-    ZPI_targetGSD = ZPI_cfg_targetGSD;
+    ZPI_targetGSD = ZPI_startGSD;
     ZPI_fovLock = false;
     ZPI_burstIdx = -1;
     ZPI_tourRunning = false;

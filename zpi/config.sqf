@@ -8,13 +8,6 @@ ZPI_cfg_faction      = "CSAT";   // target faction: "CSAT" | "NATO" | "AAF"
 ZPI_cfg_seed         = 1;        // base seed; same seed + same location = same layout (N key = seed+1)
 ZPI_cfg_startScene   = 6;        // scene launched at mission start (-1 = none)
 
-// ---- constant pixel size (R toggles): zoom follows the laser range ---------------------
-// GSD = ground sample distance = metres per pixel at the point in the middle of the screen.
-// With the lock on, every screenshot has the same scale: a standing soldier (1.8 m) is
-// 1.8 / GSD pixels tall, a tank (~7 m long) about 7 / GSD pixels.
-ZPI_cfg_targetGSD    = 0.010;    // m/px -> standing soldier ~180 px from the side, ~60 x 90 px seen from above at 45-60 deg
-ZPI_cfg_scaleLockRate = 4;       // how fast the zoom follows range changes (1/s)
-
 // ---- camera ------------------------------------
 ZPI_cfg_mouseSens     = 15;      // mouse sensitivity (higher = faster)
 ZPI_cfg_keyLookRate   = 60;      // deg/s for arrow-key look at 60 deg FOV
@@ -28,7 +21,6 @@ ZPI_cfg_startFov     = 30;       // deg, horizontal FOV at mission start
 // ---- dataset capture (P = shot, Shift+P = auto) -------------------------------------
 ZPI_cfg_viewDist      = 500;     // m: when a scene is out of view, the camera jumps this far from it ...
 ZPI_cfg_viewHeight    = 250;     // ... and this high above it, looking at the scene
-ZPI_cfg_autoInterval  = 2;       // s between automatic captures
 ZPI_cfg_minBoxPx      = 4;       // smaller boxes are dropped (px, on screen resolution)
 ZPI_cfg_minVisible    = 0.3;     // fraction of the object visible (trees, walls, nets, terrain)
 ZPI_cfg_minInFrame    = 0.35;    // fraction of the box inside the image (cut at edges)

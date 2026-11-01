@@ -23,13 +23,14 @@
 ZPI_yoloClasses = ["soldier", "tank", "military_vehicle", "explosion"];   // for the log only; classes are chosen in Python
 ZPI_clsToKind = createHashMapFromArray [["soldier", "s"], ["tracked_vehicle", "t"], ["wheeled_vehicle", "v"]];
 
-ZPI_capState    = 0;
-ZPI_capFrozen   = [];
-ZPI_autoCapture = false;
-ZPI_nextAuto    = 0;
-ZPI_shotCount   = 0;
-ZPI_explosions  = [];    // [posASL, tStart, radius, height, duration]
-ZPI_firings     = [];    // [muzzlePosASL, direction, tStart, vehicleId, radius, duration]
+ZPI_capState     = 0;
+ZPI_capFrozen    = [];
+ZPI_autoCapture  = false;
+ZPI_autoInterval = 2;     // s between automatic captures
+ZPI_nextAuto     = 0;
+ZPI_shotCount    = 0;
+ZPI_explosions   = [];    // [posASL, tStart, radius, height, duration]
+ZPI_firings      = [];    // [muzzlePosASL, direction, tStart, vehicleId, radius, duration]
 
 // ---- pinhole projection with the camera of the rendered frame ---------------------
 // Returns normalized image coordinates [u, v] (0..1 = image edges) or [] for points behind the camera.
@@ -646,7 +647,7 @@ ZPI_fnc_doCapture = {
     if (_ok) then {
         [format ["Shot %1: %2 boxes%3", ZPI_shotCount, count _boxes, ["", " (+ reference)"] select (_ref != "")]] call ZPI_fnc_msg;
     } else {
-        ["Screenshot FAILED: set HDR quality to the higher setting and check the Screenshots folder size limit"] call ZPI_fnc_msg;
+        ["Screenshot FAILED: set HDR quality to standard or check the Screenshots folder size limit"] call ZPI_fnc_msg;
     };
 };
 
@@ -667,8 +668,8 @@ ZPI_fnc_captureTick = {
 
     if (ZPI_capState > 0) then {
         ZPI_capState = ZPI_capState + 1;
-        if (ZPI_capState == 3) then { call ZPI_fnc_doCapture };
-        if (ZPI_capState >= 5) then {
+        if (ZPI_capState == 2) then { call ZPI_fnc_doCapture };
+        if (ZPI_capState >= 2) then {
             call ZPI_fnc_unfreeze;
             ZPI_capState = 0;
             if (ZPI_refImage != "") then { call ZPI_fnc_releaseRef };
@@ -679,7 +680,7 @@ ZPI_fnc_captureTick = {
             call ZPI_fnc_startCapture;
         };
         if (ZPI_autoCapture && {!ZPI_camLock} && {time >= ZPI_nextAuto}) then {
-            ZPI_nextAuto = time + ZPI_cfg_autoInterval;
+            ZPI_nextAuto = time + ZPI_autoInterval;
             call ZPI_fnc_startCapture;
         };
     };
@@ -688,7 +689,7 @@ ZPI_fnc_captureTick = {
 ZPI_fnc_toggleAuto = {
     ZPI_autoCapture = !ZPI_autoCapture;
     ZPI_nextAuto = time;
-    [["Auto-capture OFF", format ["Auto-capture ON (every %1 s)", ZPI_cfg_autoInterval]] select ZPI_autoCapture] call ZPI_fnc_msg;
+    [["Auto-capture OFF", format ["Auto-capture ON (every %1 s)", ZPI_autoInterval]] select ZPI_autoCapture] call ZPI_fnc_msg;
 };
 
 // ---- explosion reference pictures ---------------------------------------------------

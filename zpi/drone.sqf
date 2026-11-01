@@ -15,9 +15,14 @@ ZPI_laserRange  = -1;      // m, -1 = nothing hit (sky)
 ZPI_laserPos    = [];      // ASL
 ZPI_laserObj    = "";      // what was hit ("" = terrain)
 
-// constant pixel size (R)
-ZPI_scaleLock   = true;
-ZPI_targetGSD   = ZPI_cfg_targetGSD;
+// ---- constant pixel size (R toggles): zoom follows the laser range ---------------------
+// GSD = ground sample distance = metres per pixel at the point in the middle of the screen.
+// With the lock on, every screenshot has the same scale: a standing soldier (1.8 m) is
+// 1.8 / GSD pixels tall, a tank (~7 m long) about 7 / GSD pixels.
+ZPI_startGSD      = 0.010; // m/px
+ZPI_targetGSD     = ZPI_startGSD;
+ZPI_scaleLock     = true;
+ZPI_scaleLockRate = 4;
 
 ZPI_hfov        = -1;      // horizontal FOV, deg
 ZPI_vfov        = -1;      // vertical FOV, deg
@@ -273,7 +278,7 @@ ZPI_fnc_setGSD = {
 ZPI_fnc_toggleScaleLock = {
     ZPI_scaleLock = !ZPI_scaleLock;
     if (ZPI_scaleLock) then {
-        // always the same scale (ZPI_cfg_targetGSD unless changed with the wheel), so all shots match
+        // always the same scale (ZPI_startGSD unless changed with the wheel), so all shots match
         [ZPI_targetGSD] call ZPI_fnc_setGSD;
         ["Constant pixel size ON (wheel / PgUp / PgDn change the scale)"] call ZPI_fnc_msg;
     } else {
@@ -285,9 +290,9 @@ ZPI_fnc_toggleScaleLock = {
 ZPI_fnc_updateScaleLock = {
     params ["_dt"];
     if (!ZPI_scaleLock || {ZPI_fovLock} || {ZPI_laserRange <= 0}) exitWith {};
-    private _want = 2 * atan ((ZPI_targetGSD * ((getResolution) select 0)) / (2 * ZPI_laserRange));
+    private _want = 2 * atan ((ZPI_targetGSD * (getResolution select 0)) / (2 * ZPI_laserRange));
     if (abs (_want - ZPI_hfov) / ZPI_hfov < 0.005) exitWith {};
-    [ZPI_hfov + (_want - ZPI_hfov) * ((ZPI_cfg_scaleLockRate * _dt) min 1)] call ZPI_fnc_setFov;
+    [ZPI_hfov + (_want - ZPI_hfov) * ((ZPI_scaleLockRate * _dt) min 1)] call ZPI_fnc_setFov;
 };
 
 ZPI_hudExtra = "";                // extra line, e.g. building occupancy

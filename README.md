@@ -212,9 +212,6 @@ Each scene except the negatives, the building scenes and tank firing also gets o
 
 The lock is **on from the start**: the zoom follows the laser range automatically, so the scale on screen stays the same however far away you look. A standing soldier stays about `1.8 / GSD` pixels tall. The default is **0.010 m/px**: close-ups where a standing soldier seen from the side is ~180 px tall; from the generator's 35–60° angle he covers roughly 60 × 90 px. **R** turns the lock off and on.
 
-- **Mouse wheel / PgUp / PgDn** change the scale while the lock is on.
-- The scale is set in `ZPI_cfg_targetGSD`.
-
 Each JSON records `gsd_center_m_per_px`, `scale_lock` and `target_gsd`, so you can also filter the dataset by scale afterwards.
 
 ## Labels and classes
