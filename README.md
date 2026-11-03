@@ -55,6 +55,9 @@ ZPI_scenario.Altis\           mission folder = repository root (any name ending 
     frame_code.py             decode / strip the frame-number bar (screen captures only)
     zpi_paths.py              finds the screenshots, logs and output folder (shared by all tools)
     requirements.txt          required Python packages
+  extension\                  telemetry extension (C++): the live transport
+    zpi_telemetry.cpp         callExtension -> UDP, queued so the game never waits on a socket
+    build.bat                 builds zpi_telemetry_x64.dll with the MSVC tools, optionally installs it
   output\                     everything the tools make: dataset\, ortho\, sessions\, geoloc_eval\
 ```
 
@@ -372,7 +375,61 @@ Pictures taken before this version have no terrain grid and no ground points. Th
 
 ## Telemetry and ground truth
 
-Every frame the mission logs the camera pose, FOV, laser range and platform position. Every object is logged at spawn, and true positions are logged every 10 frames. `python tools\rpt_extract.py` writes them as JSONL to `output\sessions\`; `--follow --udp 127.0.0.1:5005` streams them live while you play.
+Every frame the mission logs the camera pose, FOV, laser range and platform position. Every object is logged at spawn, and true positions are logged every 10 frames. `python tools\rpt_extract.py` writes them as JSONL to `output\sessions\`; `--follow --udp 127.0.0.1:5005` streams them live while you play, but it reads the log, so it carries the delay described next.
+
+### Live transport: the RPT is too slow on its own
+
+Arma flushes the RPT in batches of about half a second, so a record written now is not readable for a while. Measured on Altis at 1920x1080 and 60 fps (3 November 2026): a telemetry record arrived a **median 207 ms after** the frame it describes was already on screen, worst case 470 ms, spread over a 517 ms sawtooth as each flush cycle came round.
+
+That does not hurt accuracy. Image and telemetry are paired by frame number, so a late record still pairs with the right pixels. It is dead time: a live pipeline has to hold about 30 frames (roughly 190 MB of raw 1080p) waiting for telemetry that has already been written.
+
+`extension\zpi_telemetry.cpp` removes it. The same `ZPI|<type>|<json>` line goes through `callExtension` and out on a UDP socket. In the same mission the record then arrived a **median 36 ms before** its frame reached the capture, with the spread down to 54 ms. The sign matters more than the size: the record is already in hand when the frame shows up, so pairing is a dictionary lookup and the frame buffer disappears. What is left is the screen capture's own latency, now the slowest link in the chain.
+
+`callExtension` is synchronous, so the DLL only copies the line into a queue and returns; a sender thread does the socket work. The call the game thread makes costs a median 2.5 us, p99 16 us, which is 0.015 % of a frame at 60 fps. A full queue drops the oldest record rather than blocking the game. The RPT is still written either way, so nothing in the offline dataset pipeline changes.
+
+**Build and install.**
+
+```
+extension\build.bat "D:\Steam\steamapps\common\Arma 3"
+```
+
+That compiles the DLL and copies it next to `Arma3_x64.exe`, where Arma loads extensions from. Arma appends the `_x64` suffix itself, so SQF always names it `zpi_telemetry`. The build needs the MSVC x64 build tools; `/MT` links the runtime statically, so the DLL needs no redistributable on the machine that runs the game. A `vswhere.exe is not recognized` line during the build comes from Microsoft's own `vcvars64.bat` and is harmless.
+
+**Turn BattlEye off.** It refuses unsigned extensions. With BattlEye running the load fails with Windows error 1450, *insufficient system resources*, which is misleading and has nothing to do with memory. Starting the game without the BattlEye service fixes it.
+
+**Settings** (`zpi\config.sqf`):
+
+| Setting | Default | What it does |
+|---|---|---|
+| `ZPI_cfg_udp` | `true` | use the extension when it is loaded |
+| `ZPI_cfg_extension` | `"zpi_telemetry"` | the `callExtension` name |
+| `ZPI_cfg_udpTarget` | `"127.0.0.1:5005"` | where the records are sent |
+
+The target is read at mission start, so changing the port means editing `config.sqf` and restarting the mission - no rebuild. A running mission can be retargeted from the debug console instead, which takes effect on the next record:
+
+```
+ZPI_cfg_extension callExtension "udp:192.168.1.50:6000"
+```
+
+It takes a dotted IPv4 address only (no DNS, so `localhost` is rejected) and does not change the config value, so a restart reverts to `config.sqf`. Nothing negotiates: the extension sends, and the receiving side has to bind the matching port.
+
+**Check that it worked.** The mission says which way it went at startup:
+
+```
+ZPI|info|extension zpi_telemetry 1.0, target 127.0.0.1:5005, reply ok 127.0.0.1:5005
+ZPI|warn|telemetry extension not loaded: live records go to the RPT only
+```
+
+The warning is not a failure - records still go to the RPT and the dataset tools are unaffected. To see the stream itself, bind the port and print one datagram:
+
+```
+python -c "import socket; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.bind(('127.0.0.1',5005)); print(s.recv(65536)[:120])"
+```
+
+Arma pauses when it loses focus, so the game has to be in the foreground for anything to arrive.
+
+**One trap.** `tools\rpt_extract.py --follow --udp 127.0.0.1:5005` was the original prototype transport: it tails the RPT and forwards each line, so it carries the full 207 ms penalty. Same port, same message format, same apparent behaviour, 200 ms worse. Use it for replaying a finished session, not for the live path.
+
 
 ## Screenshot quality
 
