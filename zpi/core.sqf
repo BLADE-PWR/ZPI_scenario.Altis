@@ -62,10 +62,28 @@ ZPI_fnc_pad = {                  // [number, width] -> zero-padded string
 
 // ---- output ---------------------------------------------------------------
 // Every record is one line:  ZPI|<type>|<json>
+// It always goes to the RPT, which the offline tools read, and additionally to
+// the extension when that is loaded, which is the only path fast enough to
+// pair with a live screen capture.
+ZPI_udp = false;
+
+ZPI_fnc_initExtension = {
+    ZPI_udp = false;
+    if (!ZPI_cfg_udp) exitWith {};
+    private _version = ZPI_cfg_extension callExtension "version";
+    if (_version isEqualTo "") exitWith {
+        diag_log text "ZPI|warn|telemetry extension not loaded: live records go to the RPT only";
+    };
+    private _reply = ZPI_cfg_extension callExtension ("udp:" + ZPI_cfg_udpTarget);
+    ZPI_udp = (_reply find "ok") isEqualTo 0;
+    diag_log text format ["ZPI|info|extension %1, target %2, reply %3", _version, ZPI_cfg_udpTarget, _reply];
+};
+
 ZPI_fnc_emit = {
     params ["_type", "_json"];
     private _line = format ["ZPI|%1|%2", _type, _json];
     diag_log text _line;
+    if (ZPI_udp) then { ZPI_cfg_extension callExtension _line };
 };
 
 ZPI_fnc_event = {

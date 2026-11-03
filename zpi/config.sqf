@@ -215,6 +215,14 @@ ZPI_cfg_telemetryEvery = 1;      // telemetry every N frames (0 = off)
 ZPI_cfg_gtEvery        = 10;     // ground-truth positions every N frames (0 = off)
 ZPI_cfg_gtMaxPerLine   = 12;     // objects per log line (keeps RPT lines short)
 
+// ---- live transport ------------------------------------------------------
+// Arma flushes the RPT in ~0.5 s batches, so a live listener reading the log
+// waits that long. The extension puts the same lines on a UDP socket instead,
+// which arrives in microseconds. The RPT is still written either way.
+ZPI_cfg_udp       = true;                // use the extension when it is loaded
+ZPI_cfg_extension = "zpi_telemetry";     // loads zpi_telemetry_x64.dll from the game folder
+ZPI_cfg_udpTarget = "127.0.0.1:5005";    // where the extension sends the records
+
 // ---- factions (base game only; missing classes are dropped at start) --------
 ZPI_factions = createHashMapFromArray [
     ["CSAT", createHashMapFromArray [
