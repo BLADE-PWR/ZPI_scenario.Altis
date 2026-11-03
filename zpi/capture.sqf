@@ -401,7 +401,7 @@ ZPI_fnc_computeLabels = {
 };
 
 // ---- buildings ---------------------------------------------------------------------
-ZPI_bldTypes = ["BUILDING", "HOUSE", "CHURCH", "CHAPEL", "FUELSTATION", "HOSPITAL"];
+ZPI_bldTypes = ["BUILDING", "CHAPEL", "CHURCH", "FUELSTATION", "HOSPITAL", "HOUSE"];
 ZPI_bldSkip  = ["wall", "fence", "ruin", "pier", "sign", "lamp", "pole", "wreck", "gate", "pipe", "dam_", "bridge"];
 
 // Ground area seen by the camera: where the 4 image-corner rays hit the ground
@@ -413,7 +413,7 @@ ZPI_fnc_viewFootprint = {
     private _pts = [];
     {
         private _d = vectorNormalized ((_f vectorAdd (_r vectorMultiply ((_x select 0) * _th))) vectorAdd (_u vectorMultiply ((_x select 1) * _tv)));
-        private _t = if ((_d select 2) < -0.02) then { (((_o select 2) - _gz) / -(_d select 2)) min 2500 } else { 2500 };
+        private _t = if ((_d select 2) < -0.02) then { ((_gz - (_o select 2)) / (_d select 2)) min 2500 } else { 2500 };
         _pts pushBack (_o vectorAdd (_d vectorMultiply _t));
     } forEach [[-1, -1], [1, -1], [1, 1], [-1, 1]];
     private _c = [0, 0, 0];

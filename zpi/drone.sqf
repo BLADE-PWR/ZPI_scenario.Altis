@@ -15,7 +15,7 @@ ZPI_laserRange  = -1;      // m, -1 = nothing hit (sky)
 ZPI_laserPos    = [];      // ASL
 ZPI_laserObj    = "";      // what was hit ("" = terrain)
 
-// ---- constant pixel size (R toggles): zoom follows the laser range ---------------------
+// ---- constant pixel size (R toggles): constant m/px ratio ---------------------
 // GSD = ground sample distance = metres per pixel at the point in the middle of the screen.
 // With the lock on, every screenshot has the same scale: a standing soldier (1.8 m) is
 // 1.8 / GSD pixels tall, a tank (~7 m long) about 7 / GSD pixels.
@@ -280,7 +280,7 @@ ZPI_fnc_toggleScaleLock = {
     if (ZPI_scaleLock) then {
         // always the same scale (ZPI_startGSD unless changed with the wheel), so all shots match
         [ZPI_targetGSD] call ZPI_fnc_setGSD;
-        ["Constant pixel size ON (wheel / PgUp / PgDn change the scale)"] call ZPI_fnc_msg;
+        ["Constant pixel size ON (constant m/px ratio)"] call ZPI_fnc_msg;
     } else {
         ["Constant pixel size OFF"] call ZPI_fnc_msg;
     };

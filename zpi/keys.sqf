@@ -7,7 +7,7 @@ ZPI_helpText = "<t size='1.1' font='RobotoCondensedBold'>ZPI drone scenes</t><br
     + "<t color='#ffd27a'>CAMERA</t><br/>"
     + "WASD move, E up, Q down, Shift fast<br/>"
     + "Mouse look, wheel (or PgUp/PgDn) zoom, arrows look<br/>"
-    + "R constant pixel size on/off (zoom follows range)<br/><br/>"
+    + "R constant pixel size on/off<br/><br/>"
     + "<t color='#ffd27a'>DATASET</t><br/>"
     + "P screenshot + labels<br/>"
     + "Shift+P auto-capture on/off<br/>"

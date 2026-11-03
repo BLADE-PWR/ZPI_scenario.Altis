@@ -34,8 +34,8 @@ ZPI_scenario.Altis\           mission folder = repository root (any name ending 
   README.md                   this file
   .gitignore                  keeps output\, Python caches and trained models out of git
   zpi\                        script's source code
-    config.sqf                everything you will want to tweak
-    scenes.sqf                the 24 scenes (23 in the generator + "mixed")
+    config.sqf                file with global variables
+    scenes.sqf                every scene's layout that can be spawned
     tour.sqf                  Home key: the dataset generator (sites, bursts, zoom, firing, explosions)
     sites.sqf                 where scenes go: green ground, few buildings, buildings a squad can enter
     drone.sqf                 camera, FOV, laser rangefinder, constant-pixel-size lock, HUD, telemetry
