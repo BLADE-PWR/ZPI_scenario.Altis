@@ -57,6 +57,7 @@ ZPI_center       = [0, 0, 0];
     ZPI_sessionTag = format ["%1%2%3_%4%5%6", _t select 0, [_t select 1, 2] call ZPI_fnc_pad, [_t select 2, 2] call ZPI_fnc_pad,
         [_t select 3, 2] call ZPI_fnc_pad, [_t select 4, 2] call ZPI_fnc_pad, [_t select 5, 2] call ZPI_fnc_pad];
 
+    call ZPI_fnc_initExtension;
     call ZPI_fnc_initLocations;
     call ZPI_fnc_applyTime;
     call ZPI_fnc_applyWeather;

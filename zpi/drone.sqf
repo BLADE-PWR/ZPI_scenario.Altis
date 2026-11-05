@@ -141,6 +141,7 @@ ZPI_fnc_createCamera = {
     showCinemaBorder false;
     ZPI_cam cameraEffect ["internal", "back"];
     call ZPI_fnc_showHud;
+    call ZPI_fnc_showFrameCode;
     cameraEffectEnableHUD true;
     [true] call ZPI_fnc_viewScene;
 };
@@ -167,26 +168,34 @@ ZPI_fnc_zoom = {                  // _z > 0 zoom in, < 0 zoom out
 };
 
 // ---- frame-number bar (image <-> telemetry sync) --------------------------
-// 2 sentinel squares (white, black) + 24 data bits, LSB first, 8x8 px each,
-// starting 4 px from the top-left corner. Decoder: tools/frame_code.py
+// 2 sentinel squares (white, black) + 12 data bits, LSB first, 4x4 px each,
+// in the very corner of the screen. Decoder: tools/frame_code.py
+// 12 bits wrap every 4096 frames (68 s at 60 fps), which is far longer than
+// any image/telemetry pairing window; the telemetry stream carries the frame
+// number in full, so the bar only has to say which recent frame this is.
 // Note: the screenshot command does not capture UI, so the bar is only in
 // screen captures (dxcam/OBS), never in screenshots taken with the P key.
+// The bar is not part of the readout: live capture needs it up while quiet
+// mode (U) hides the readout, so the two layers go up and down separately.
 
 ZPI_fnc_hideHud = {
     ("ZPI_hudLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
-    ("ZPI_frameCodeLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
 };
 
 ZPI_fnc_showHud = {
     ("ZPI_hudLayer" call BIS_fnc_rscLayer) cutRsc ["ZPI_Hud", "PLAIN", 0, false];
+};
+
+// Put up once at start and left alone: nothing hides the bar.
+ZPI_fnc_showFrameCode = {
     ("ZPI_frameCodeLayer" call BIS_fnc_rscLayer) cutRsc ["ZPI_FrameCode", "PLAIN", 0, false];
 };
 
 ZPI_fnc_updateFrameCode = {
     private _d = uiNamespace getVariable ["ZPI_frameCodeDisplay", displayNull];
     if (isNull _d) exitWith {};
-    private _n = diag_frameNo mod 16777216;
-    for "_i" from 0 to 23 do {
+    private _n = diag_frameNo mod 4096;
+    for "_i" from 0 to 11 do {
         private _b = _n mod 2;
         _n = floor (_n / 2);
         (_d displayCtrl (1100 + _i)) ctrlSetBackgroundColor ([[0, 0, 0, 1], [1, 1, 1, 1]] select _b);
@@ -345,8 +354,8 @@ ZPI_fnc_onFrame = {
     call ZPI_fnc_buildingTick;
     if (!ZPI_quiet) then {
         call ZPI_fnc_updateHud;
-        call ZPI_fnc_updateFrameCode;
     };
+    call ZPI_fnc_updateFrameCode;
     if (ZPI_cfg_telemetryEvery > 0 && {diag_frameNo % ZPI_cfg_telemetryEvery == 0}) then {
         call ZPI_fnc_logTelemetry;
     };
