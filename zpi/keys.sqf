@@ -39,7 +39,7 @@ ZPI_helpText = "<t size='1.1' font='RobotoCondensedBold'>ZPI drone scenes</t><br
 
 ZPI_helpOpen = false;
 ZPI_fnc_showHelp = {
-    if (ZPI_quiet || ZPI_helpOpen) exitWith { true };
+    if (ZPI_quietMode != 0 || ZPI_helpOpen) exitWith { true };
     ZPI_helpOpen = true;
     hintSilent parseText ZPI_helpText;
     [] spawn {
@@ -124,16 +124,21 @@ ZPI_fnc_onKey = {
         case 20: { call ZPI_fnc_nextTime };                                 // T
         case 21: { call ZPI_fnc_nextWeather };                              // Y
         case 22: {                                                          // U
-            ZPI_quiet = !ZPI_quiet;
-            showChat !ZPI_quiet;
-            if (ZPI_quiet) then {
+            ZPI_quietMode = ZPI_quietMode + 1;
+            if (ZPI_quietMode > 2) then { ZPI_quietMode = 0 };
+            showChat (ZPI_quietMode == 0);
+            if (ZPI_quietMode != 0) then {
                 call ZPI_fnc_hideHud;
                 ("ZPI_msgLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
                 hintSilent "";
                 ZPI_helpOpen = false;
             } else {
                 call ZPI_fnc_showHud;
-                ["Quiet mode off"] call ZPI_fnc_msg;
+            };
+            if (ZPI_quietMode != 2) then {
+                call ZPI_fnc_showFrameCode;
+            } else {
+                call ZPI_fnc_hideFrameCode;
             };
         };
         case 35: { call ZPI_fnc_showHelp };                                 // H

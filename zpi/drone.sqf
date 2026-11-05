@@ -186,9 +186,12 @@ ZPI_fnc_showHud = {
     ("ZPI_hudLayer" call BIS_fnc_rscLayer) cutRsc ["ZPI_Hud", "PLAIN", 0, false];
 };
 
-// Put up once at start and left alone: nothing hides the bar.
 ZPI_fnc_showFrameCode = {
     ("ZPI_frameCodeLayer" call BIS_fnc_rscLayer) cutRsc ["ZPI_FrameCode", "PLAIN", 0, false];
+};
+
+ZPI_fnc_hideFrameCode = {
+    ("ZPI_frameCodeLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
 };
 
 ZPI_fnc_updateFrameCode = {
@@ -352,10 +355,12 @@ ZPI_fnc_onFrame = {
     [_rdt] call ZPI_fnc_updateScaleLock;
     call ZPI_fnc_captureTick;
     call ZPI_fnc_buildingTick;
-    if (!ZPI_quiet) then {
+    if (ZPI_quietMode == 0) then {
         call ZPI_fnc_updateHud;
     };
-    call ZPI_fnc_updateFrameCode;
+    if (ZPI_quietMode < 2) then {
+        call ZPI_fnc_updateFrameCode;
+    };
     if (ZPI_cfg_telemetryEvery > 0 && {diag_frameNo % ZPI_cfg_telemetryEvery == 0}) then {
         call ZPI_fnc_logTelemetry;
     };

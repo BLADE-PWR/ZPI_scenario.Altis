@@ -65,17 +65,17 @@ ZPI_fnc_pad = {                  // [number, width] -> zero-padded string
 // It always goes to the RPT, which the offline tools read, and additionally to
 // the extension when that is loaded, which is the only path fast enough to
 // pair with a live screen capture.
-ZPI_udp = false;
+ZPI_udp_enabled = false;
 
 ZPI_fnc_initExtension = {
-    ZPI_udp = false;
+    ZPI_udp_enabled = false;
     if (!ZPI_cfg_udp) exitWith {};
     private _version = ZPI_cfg_extension callExtension "version";
     if (_version isEqualTo "") exitWith {
         diag_log text "ZPI|warn|telemetry extension not loaded: live records go to the RPT only";
     };
     private _reply = ZPI_cfg_extension callExtension ("udp:" + ZPI_cfg_udpTarget);
-    ZPI_udp = (_reply find "ok") isEqualTo 0;
+    ZPI_udp_enabled = (_reply find "ok") isEqualTo 0;
     diag_log text format ["ZPI|info|extension %1, target %2, reply %3", _version, ZPI_cfg_udpTarget, _reply];
 };
 
@@ -83,7 +83,7 @@ ZPI_fnc_emit = {
     params ["_type", "_json"];
     private _line = format ["ZPI|%1|%2", _type, _json];
     diag_log text _line;
-    if (ZPI_udp) then { ZPI_cfg_extension callExtension _line };
+    if (ZPI_udp_enabled) then { ZPI_cfg_extension callExtension _line };
 };
 
 ZPI_fnc_event = {
@@ -92,11 +92,11 @@ ZPI_fnc_event = {
         diag_frameNo toFixed 0, time toFixed 3, _kind, ZPI_sceneName, ZPI_cfg_seed, ZPI_regionId, _data]] call ZPI_fnc_emit;
 };
 
-// On-screen messages go into the camera image, so they can be silenced (U).
-ZPI_quiet = false;
+// ZPI_quietMode: 0 -> everything visible, 1 -> hide everything except frame code, 2 -> hide everything including frame code.
+ZPI_quietMode = 0;
 ZPI_fnc_msg = {
     params ["_text"];
-    if (!ZPI_quiet) then {
+    if (ZPI_quietMode == 0) then {
         systemChat ("[ZPI] " + _text);
     };
 };

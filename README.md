@@ -3,17 +3,18 @@
 ## Setup
 
 1. In the Arma 3 Launcher, go to **Parameters → Advanced** and tick **Show Script Errors**. Leave **No Logs** unticked: the labels are written to the logs.
-2. Clone the repository into your Arma 3 missions folder. On Windows, in a terminal:
+2. Disable BattlEye in the Launcher: **BattlEye → untick "turn on BattlEye"**. The telemetry extension is unsigned, so it won't load with BattlEye on.
+3. Clone the repository into your Arma 3 missions folder. On Windows, in a terminal:
 
 ```
 cd "%USERPROFILE%\Documents\Arma 3\missions"
 git clone https://github.com/Matistan/ZPI_scenario.Altis
 ```
 
-3. Install Python and the tools' packages: `python -m pip install -r ZPI_scenario.Altis\tools\requirements.txt`
-4. Raise the screenshot folder limit: add `maxScreenShotFolderSizeMB = 20000;` to `Documents\Arma 3\<profile>.Arma3Profile`, with the game closed.
-5. Start Arma, open Eden Editor, open ZPI scenario: **Scenario → Open → ZPI_scenario** and click **Play in Singleplayer**.
-6. Change video settings: set ultra overall quality, set **HDR quality** to **Standard** and turn **Bloom** off. You can also increase the **Sampling** to 200 % for 4K screenshots, but that only helps when training on tiles.
+4. Install Python and the tools' packages: `python -m pip install -r ZPI_scenario.Altis\tools\requirements.txt`
+5. Raise the screenshot folder limit: add `maxScreenShotFolderSizeMB = 20000;` to `Documents\Arma 3\<profile>.Arma3Profile`, with the game closed.
+6. Start Arma, open Eden Editor, open ZPI scenario: **Scenario → Open → ZPI_scenario** and click **Play in Singleplayer**.
+7. Change video settings: set ultra overall quality, set **HDR quality** to **Standard** and turn **Bloom** off. You can also increase the **Sampling** to 200 % for 4K screenshots, but that only helps when training on tiles.
 
 ## Overview
 
@@ -51,7 +52,7 @@ ZPI_scenario.Altis\           mission folder = repository root (any name ending 
     make_ortho.py             orthophoto tiles -> one map (PNG + world file) + map with soldiers
     zpi_enhance.py            haze correction (used by the dataset tool; also for live frames)
     clean_start.py            deletes outputs, screenshots and old logs to start from clean folders
-    rpt_extract.py            logs -> per-session telemetry / ground truth JSONL (also live over UDP)
+    rpt_extract.py            logs -> per-session telemetry / ground truth JSONL
     frame_code.py             decode / strip the frame-number bar (screen captures only)
     zpi_paths.py              finds the screenshots, logs and output folder (shared by all tools)
     requirements.txt          required Python packages
@@ -219,7 +220,7 @@ Each JSON records `gsd_center_m_per_px`, `scale_lock` and `target_gsd`, so you c
 
 ## Labels and classes
 
-**Vehicle boxes.** The box Arma reports for a whole vehicle model is padded on every side; for a T-100 it is 6.7 m wide and 4.5 m tall instead of about 3.5 × 2.3 m. The mission therefore takes the boxes of several model LODs (visual, fire, view and geometry) and keeps their overlap, which is the tightest box that still contains the vehicle. Each vehicle type's boxes are written to the log once as `ZPI|vbox|`.
+**Vehicle and building boxes.** The box Arma reports for a whole vehicle or building model is padded on every side; for a T-100 it is 6.7 m wide and 4.5 m tall instead of about 3.5 × 2.3 m. The mission therefore takes the boxes of several model LODs (visual, fire, view and geometry) and keeps their overlap, which is the tightest box that still contains the vehicle or building. Each vehicle or building type's boxes are written to the log once as `ZPI|vbox|`.
 
 **Soldier boxes (tight).** Earlier versions labelled a soldier with *one* 3D box around his body, projected into the picture. Seen from above at an angle, the near-bottom corners of that box land below his feet, so the box was loose at the bottom (10–40 % of its height below the feet) and a bit too wide. Now every body part of the visible model (head, upper arms, forearms, hands, thighs, shins, feet, toes, …) has its own small box; their corners are projected and the label is the union, which hugs the silhouette. A helmet (+8 cm) and a backpack (+22 cm behind the back) are added, rifles are not. If the game does not give animated body parts, the hit-point parts are used instead (bigger, still much tighter). Each soldier in the JSON says `"box_method"`: `body_parts`, `hit_point_parts`, `corrected_3d_box` (older picture, corrected, see Building the dataset) or `3d_box` (older picture, uncorrected). `ZPI_cfg_soldierTightBox = false` goes back to the old box.
 
@@ -375,61 +376,27 @@ Pictures taken before this version have no terrain grid and no ground points. Th
 
 ## Telemetry and ground truth
 
-Every frame the mission logs the camera pose, FOV, laser range and platform position. Every object is logged at spawn, and true positions are logged every 10 frames. `python tools\rpt_extract.py` writes them as JSONL to `output\sessions\`; `--follow --udp 127.0.0.1:5005` streams them live while you play, but it reads the log, so it carries the delay described next.
+Every frame the mission logs the camera pose, FOV, laser range and platform position. Every object is logged at spawn, and true positions are logged every 10 frames. `python tools\rpt_extract.py` writes them as JSONL to `output\sessions\`
 
-### Live transport: the RPT is too slow on its own
+`extension\zpi_telemetry.cpp` is the .dll extention that does the same thing, but works instantly, much faster than writing logs in the RPT file and then reading them. The same `ZPI|<type>|<json>` lines that are written to the RPT file go through `callExtension` and out on a UDP socket. This is essential to map objects detected with a drone camera in real time, because the RPT log is ~200 ms behind the game.
 
-Arma flushes the RPT in batches of about half a second, so a record written now is not readable for a while. Measured on Altis at 1920x1080 and 60 fps (3 November 2026): a telemetry record arrived a **median 207 ms after** the frame it describes was already on screen, worst case 470 ms, spread over a 517 ms sawtooth as each flush cycle came round.
-
-That does not hurt accuracy. Image and telemetry are paired by frame number, so a late record still pairs with the right pixels. It is dead time: a live pipeline has to hold about 30 frames (roughly 190 MB of raw 1080p) waiting for telemetry that has already been written.
-
-`extension\zpi_telemetry.cpp` removes it. The same `ZPI|<type>|<json>` line goes through `callExtension` and out on a UDP socket. In the same mission the record then arrived a **median 36 ms before** its frame reached the capture, with the spread down to 54 ms. The sign matters more than the size: the record is already in hand when the frame shows up, so pairing is a dictionary lookup and the frame buffer disappears. What is left is the screen capture's own latency, now the slowest link in the chain.
-
-`callExtension` is synchronous, so the DLL only copies the line into a queue and returns; a sender thread does the socket work. The call the game thread makes costs a median 2.5 us, p99 16 us, which is 0.015 % of a frame at 60 fps. A full queue drops the oldest record rather than blocking the game. The RPT is still written either way, so nothing in the offline dataset pipeline changes.
-
-**Build and install.**
+**Build and test the extension**
 
 ```
-extension\build.bat "D:\Steam\steamapps\common\Arma 3"
+extension\build.bat <Arma 3 install path, e.g. "D:\Steam\steamapps\common\Arma 3">
 ```
 
-That compiles the DLL and copies it next to `Arma3_x64.exe`, where Arma loads extensions from. Arma appends the `_x64` suffix itself, so SQF always names it `zpi_telemetry`. The build needs the MSVC x64 build tools; `/MT` links the runtime statically, so the DLL needs no redistributable on the machine that runs the game. A `vswhere.exe is not recognized` line during the build comes from Microsoft's own `vcvars64.bat` and is harmless.
-
-**Turn BattlEye off.** It refuses unsigned extensions. With BattlEye running the load fails with Windows error 1450, *insufficient system resources*, which is misleading and has nothing to do with memory. Starting the game without the BattlEye service fixes it.
-
-**Settings** (`zpi\config.sqf`):
-
-| Setting | Default | What it does |
-|---|---|---|
-| `ZPI_cfg_udp` | `true` | use the extension when it is loaded |
-| `ZPI_cfg_extension` | `"zpi_telemetry"` | the `callExtension` name |
-| `ZPI_cfg_udpTarget` | `"127.0.0.1:5005"` | where the records are sent |
-
-The target is read at mission start, so changing the port means editing `config.sqf` and restarting the mission - no rebuild. A running mission can be retargeted from the debug console instead, which takes effect on the next record:
-
-```
-ZPI_cfg_extension callExtension "udp:192.168.1.50:6000"
-```
-
-It takes a dotted IPv4 address only (no DNS, so `localhost` is rejected) and does not change the config value, so a restart reverts to `config.sqf`. Nothing negotiates: the extension sends, and the receiving side has to bind the matching port.
-
-**Check that it worked.** The mission says which way it went at startup:
+To test that it works, find the line in the RPT log that looks like this:
 
 ```
 ZPI|info|extension zpi_telemetry 1.0, target 127.0.0.1:5005, reply ok 127.0.0.1:5005
-ZPI|warn|telemetry extension not loaded: live records go to the RPT only
 ```
 
-The warning is not a failure - records still go to the RPT and the dataset tools are unaffected. To see the stream itself, bind the port and print one datagram:
+Quick test in the terminal that the UDP socket is working - run this command in the terminal and run the scenario in Arma:
 
 ```
-python -c "import socket; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.bind(('127.0.0.1',5005)); print(s.recv(65536)[:120])"
+python -c "import socket; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.bind(('127.0.0.1',5005)); print('listening on 5005'); [print(s.recv(65536).decode(errors='replace')[:200], flush=True) for _ in iter(int, 1)]"
 ```
-
-Arma pauses when it loses focus, so the game has to be in the foreground for anything to arrive.
-
-**One trap.** `tools\rpt_extract.py --follow --udp 127.0.0.1:5005` was the original prototype transport: it tails the RPT and forwards each line, so it carries the full 207 ms penalty. Same port, same message format, same apparent behaviour, 200 ms worse. Use it for replaying a finished session, not for the live path.
-
 
 ## Screenshot quality
 

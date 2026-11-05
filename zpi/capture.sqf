@@ -194,16 +194,16 @@ ZPI_fnc_soldierBox2D = {
     [[_x0, _y0, _x1, _y1], _meth]
 };
 
-// Vehicle: the box Arma reports for the whole model is often much larger than the
-// vehicle (it includes invisible helper parts). Take the box of several model LODs
+// Model box (vehicles, buildings): the box Arma reports for the whole model is often much larger than the
+// model (it includes invisible helper parts). Take the box of several model LODs
 // and keep their intersection: every one of them contains the hull, so the overlap
-// is the tightest box that still contains it. Cached per vehicle type.
-ZPI_vehBoxCache = createHashMap;
-ZPI_fnc_vehicleBox = {
+// is the tightest box that still contains it. Cached per model type.
+ZPI_modelBoxCache = createHashMap;
+ZPI_fnc_modelBox = {
     params ["_v"];
     private _key = typeOf _v;
     if (_key == "") then { _key = (getModelInfo _v) select 1 };
-    private _hit = ZPI_vehBoxCache getOrDefault [_key, []];
+    private _hit = ZPI_modelBoxCache getOrDefault [_key, []];
     if (_hit isNotEqualTo []) exitWith { _hit };
     private _cands = [];
     { _cands pushBack [_x select 0, _x call (_x select 1)] } forEach [
@@ -219,13 +219,15 @@ ZPI_fnc_vehicleBox = {
     private _used = [];
     {
         _x params ["_name", "_bb"];
-        if (_bb isEqualType [] && {count _bb >= 2} && {((_bb select 1) vectorDiff (_bb select 0)) select 0 > 0.5}
-            && {((_bb select 1) vectorDiff (_bb select 0)) select 1 > 0.5} && {((_bb select 1) vectorDiff (_bb select 0)) select 2 > 0.3}) then {
-            for "_i" from 0 to 2 do {
-                _mn set [_i, (_mn select _i) max ((_bb select 0) select _i)];
-                _mx set [_i, (_mx select _i) min ((_bb select 1) select _i)];
+        if (_bb isEqualType [] && {count _bb >= 2}) then {
+            private _e = (_bb select 1) vectorDiff (_bb select 0);
+            if ((_e select 0) > 0.5 && {(_e select 1) > 0.5} && {(_e select 2) > 0.3}) then {
+                for "_i" from 0 to 2 do {
+                    _mn set [_i, (_mn select _i) max ((_bb select 0) select _i)];
+                    _mx set [_i, (_mx select _i) min ((_bb select 1) select _i)];
+                };
+                _used pushBack _name;
             };
-            _used pushBack _name;
         };
     } forEach _cands;
     if (_used isEqualTo [] || {(_mx select 0) <= (_mn select 0)} || {(_mx select 1) <= (_mn select 1)} || {(_mx select 2) <= (_mn select 2)}) then {
@@ -234,11 +236,12 @@ ZPI_fnc_vehicleBox = {
         _mx = _bb select 1;
         _used = ["fallback"];
     };
-    // one log line per vehicle type, so the boxes can be checked
+    // one log line per model type, so the boxes can be checked
     ["vbox", format ['{"class":"%1","used":%2,"result":[%3,%4],"candidates":[%5]}', _key, str _used,
         [_mn, 2] call ZPI_fnc_v3, [_mx, 2] call ZPI_fnc_v3,
-        (_cands apply { format ['["%1",%2]', _x select 0, ["[]", format ["[%1,%2]", [((_x select 1) select 0), 2] call ZPI_fnc_v3, [((_x select 1) select 1), 2] call ZPI_fnc_v3]] select ((_x select 1) isEqualType [] && {count (_x select 1) >= 2})] }) joinString ","]] call ZPI_fnc_emit;
-    ZPI_vehBoxCache set [_key, [_mn, _mx]];
+        (_cands apply { format ['["%1",%2]', _x select 0, ["[]", format ["[%1,%2]", [((_x select 1) select 0), 2] call ZPI_fnc_v3,
+        [((_x select 1) select 1), 2] call ZPI_fnc_v3]] select ((_x select 1) isEqualType [] && {count (_x select 1) >= 2})] }) joinString ","]] call ZPI_fnc_emit;
+    ZPI_modelBoxCache set [_key, [_mn, _mx]];
     [_mn, _mx]
 };
 
@@ -326,7 +329,7 @@ ZPI_fnc_computeLabels = {
         _x params ["_id", "_obj", "_cls"];
         private _kind = ZPI_clsToKind getOrDefault [_cls, ""];       // negatives have no kind
         if (_kind != "" && {!isNull _obj} && {alive _obj} && {(_cam vectorDistance (getPosASL _obj)) < ZPI_cfg_maxLabelDist}) then {
-            (if (_kind == "s") then { [_obj] call ZPI_fnc_soldierBox } else { [_obj] call ZPI_fnc_vehicleBox }) params ["_mn", "_mx"];
+            (if (_kind == "s") then { [_obj] call ZPI_fnc_soldierBox } else { [_obj] call ZPI_fnc_modelBox }) params ["_mn", "_mx"];
             private _box = [[_obj, _mn, _mx] call ZPI_fnc_corners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
             private _old = [];
             private _meth = "";
@@ -432,7 +435,7 @@ ZPI_fnc_buildingLabels = {
     {
         private _b = _x;
         if ([_b] call ZPI_fnc_isLabelBuilding) then {
-            ([_b] call ZPI_fnc_vehicleBox) params ["_mn", "_mx"];
+            ([_b] call ZPI_fnc_modelBox) params ["_mn", "_mx"];
             private _e = _mx vectorDiff _mn;
             private _box = [[_b, _mn, _mx] call ZPI_fnc_corners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
             // cheap checks first: inside the picture and big enough

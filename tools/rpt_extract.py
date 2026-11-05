@@ -13,7 +13,6 @@ A new session starts at every "session_start" event (= mission start).
 Usage (from the mission folder; output goes to <mission>\\output\\sessions):
   python tools/rpt_extract.py                       # all RPT logs in %LOCALAPPDATA%\\Arma 3
   python tools/rpt_extract.py path\\to\\file.rpt -o sessions
-  python tools/rpt_extract.py --follow --udp 127.0.0.1:5005   # live: forward telemetry over UDP
 """
 from __future__ import annotations
 
@@ -22,7 +21,6 @@ import glob
 import json
 import os
 import re
-import socket
 import sys
 import time
 from collections import defaultdict
@@ -138,46 +136,10 @@ def extract(rpts, out_root: Path) -> list[Session]:
     return sessions
 
 
-def follow(rpt: Path, udp: str | None):
-    """Tail the RPT and forward telemetry records live (prototype transport)."""
-    sock = addr = None
-    if udp:
-        host, port = udp.rsplit(":", 1)
-        addr = (host, int(port))
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    print(f"following {rpt}" + (f" -> udp {udp}" if udp else ""), file=sys.stderr)
-    with open(rpt, encoding="utf-8", errors="replace") as fh:
-        fh.seek(0, os.SEEK_END)
-        buf = ""
-        while True:
-            chunk = fh.readline()
-            if not chunk:
-                time.sleep(0.002)
-                continue
-            buf += chunk
-            if not buf.endswith("\n"):
-                continue  # partial line, wait for the rest
-            line, buf = buf, ""
-            try:
-                parsed = parse_line(line)
-            except json.JSONDecodeError:
-                continue
-            if parsed is None:
-                continue
-            kind, rec = parsed
-            msg = json.dumps({"type": kind, **rec}, separators=(",", ":"))
-            if sock:
-                sock.sendto(msg.encode(), addr)
-            else:
-                print(msg, flush=True)
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("rpt", nargs="?", help="RPT file (default: newest in %%LOCALAPPDATA%%\\Arma 3)")
     ap.add_argument("-o", "--out", default="sessions", help="output folder; a plain name goes into the mission's output\\ folder")
-    ap.add_argument("--follow", action="store_true", help="tail the log and stream records")
-    ap.add_argument("--udp", help="with --follow: send each record as a UDP datagram to host:port")
     args = ap.parse_args()
 
     if args.rpt:
@@ -186,11 +148,7 @@ def main():
         rpts = sorted((Path(p) for p in glob.glob(str(default_rpt_dir() / "*.rpt"))), key=os.path.getmtime)
         if not rpts:
             sys.exit(f"No .rpt files in {default_rpt_dir()}")
-    rpt = rpts[-1]
-    if args.follow:
-        follow(rpt, args.udp)
-    else:
-        extract(rpts, zpi_paths.out_path(args.out))
+    extract(rpts, zpi_paths.out_path(args.out))
 
 
 if __name__ == "__main__":

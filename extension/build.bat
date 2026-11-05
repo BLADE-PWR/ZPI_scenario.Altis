@@ -27,7 +27,7 @@ set "PF86=%ProgramFiles(x86)%"
 set "TAIL=VC\Auxiliary\Build\vcvars64.bat"
 set "VCVARS=%ZPI_VCVARS%"
 
-for %%y in (2022 2019 2017) do for %%e in (BuildTools Community Professional Enterprise) do (
+for %%y in (2022 2019 2017 18) do for %%e in (BuildTools Community Professional Enterprise) do (
     if not defined VCVARS if exist "!PF!\Microsoft Visual Studio\%%y\%%e\!TAIL!" set "VCVARS=!PF!\Microsoft Visual Studio\%%y\%%e\!TAIL!"
     if not defined VCVARS if exist "!PF86!\Microsoft Visual Studio\%%y\%%e\!TAIL!" set "VCVARS=!PF86!\Microsoft Visual Studio\%%y\%%e\!TAIL!"
 )

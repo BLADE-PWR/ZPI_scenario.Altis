@@ -40,7 +40,7 @@ ZPI_fnc_isLabelBuilding = {
     if (isNull _b || {damage _b >= 0.9} || {isObjectHidden _b}) exitWith { false };
     private _cn = toLower ((typeOf _b) + " " + ((getModelInfo _b) select 0));
     if (({ (_cn find _x) >= 0 } count ZPI_bldSkip) > 0) exitWith { false };
-    ([_b] call ZPI_fnc_vehicleBox) params ["_mn", "_mx"];
+    ([_b] call ZPI_fnc_modelBox) params ["_mn", "_mx"];
     private _e = _mx vectorDiff _mn;
     (_e select 0) >= 3 && {(_e select 1) >= 3} && {(_e select 2) >= 2.5}
 };
