@@ -13,14 +13,13 @@
 //    ZPI|shot|   image, camera pose + FOV + attitude + altitude
 //    ZPI|shotx|  laser rangefinder, scene, time, weather, explosion reference image, building occupancy
 //    ZPI|dem|    terrain heights on a grid under the view;  ZPI|ray|  what 9 x 5 image points hit
-//    ZPI|label|  boxes, in parts: [kind, cx, cy, w, h, id, visible, cut, stance, x, y, z, dist, inside, grid,
-//                gx, gy, gz, gu, gv]  (g = ground point ASL and its normalized image position)
+//    ZPI|label|  boxes, in parts: [kind, cx, cy, w, h, id, visible, cut, stance, dist, inside, grid,
+//                gx, gy, gz, gu, gv, method, box3d]  (g = ground point ASL and its normalized image position)
 //                kind: "s" soldier, "t" tank (tracked), "v" military vehicle (wheeled), "e" explosion,
 //                      "f" gun firing (muzzle blast of a tank / IFV main gun), "b" building
 //  tools/make_yolo_dataset.py turns them into YOLO labels + one JSON per screenshot.
 // =====================================================================
 
-ZPI_yoloClasses = ["soldier", "tank", "military_vehicle", "explosion"];   // for the log only; classes are chosen in Python
 ZPI_clsToKind = createHashMapFromArray [["soldier", "s"], ["tracked_vehicle", "t"], ["wheeled_vehicle", "v"]];
 
 ZPI_capFrozenEntities = [];

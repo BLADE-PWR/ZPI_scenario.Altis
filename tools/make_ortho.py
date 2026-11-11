@@ -36,28 +36,8 @@ import zpi_paths  # noqa: E402
 
 LINE_RE = re.compile(r"ZPI\|(ortho|otile|oobj)\|(.*)$")
 STANCE_COL = {"STAND": (255, 60, 60), "CROUCH": (255, 160, 40), "PRONE": (255, 0, 200)}
-KIND_COL = {"t": (255, 220, 0), "v": (60, 200, 255), "tracked_vehicle": (255, 220, 0), "wheeled_vehicle": (60, 200, 255)}
+KIND_COL = {"t": (255, 220, 0), "v": (60, 200, 255)}
 KIND_NAME = {"s": "soldier", "t": "tank", "v": "military vehicle"}
-
-
-def default_rpts() -> list[Path]:
-    return zpi_paths.rpt_files()
-
-
-def default_shots_dirs() -> list[Path]:
-    return zpi_paths.screenshot_dirs()
-
-
-def find_image(rel: str, dirs: list[Path]) -> Path | None:
-    rel = rel.replace("\\", "/")
-    for d in dirs:
-        if (d / rel).exists():
-            return d / rel
-    name = Path(rel).name
-    for d in dirs:
-        for p in d.rglob(name):
-            return p
-    return None
 
 
 def read_orthos(rpts: list[Path]) -> dict[str, dict]:
@@ -92,7 +72,7 @@ def build(o: dict, dirs: list[Path], outdir: Path, mpp: float | None, tag: str):
     for t in o["tiles"]:
         if not t.get("ok", True):
             continue
-        p = find_image(t["image"], dirs)
+        p = zpi_paths.find_image(t["image"], dirs)
         if p is None:
             print(f"  missing tile image: {t['image']}")
             continue
@@ -105,7 +85,7 @@ def build(o: dict, dirs: list[Path], outdir: Path, mpp: float | None, tag: str):
         sys.exit("No tile images found. Check the Screenshots folder (--shots).")
 
     with Image.open(tiles[0][1]) as im0:
-        W0, H0 = im0.size
+        W0 = im0.size[0]
     if mpp is None:
         mpp = round(min(t[4] / W0 for t in tiles), 3)        # finest tile resolution
 
@@ -221,8 +201,8 @@ def main():
     ap.add_argument("--mpp", type=float, help="metres per pixel of the map (default: tile resolution)")
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args()
-    rpts = [Path(r) for r in args.rpt] if args.rpt else default_rpts()
-    dirs = [Path(s) for s in args.shots] if args.shots else default_shots_dirs()
+    rpts = [Path(r) for r in args.rpt] if args.rpt else zpi_paths.rpt_files()
+    dirs = [Path(s) for s in args.shots] if args.shots else [zpi_paths.SCREENSHOT_DIR]
     orthos = read_orthos(rpts)
     if not orthos:
         sys.exit("No orthophoto found in the logs. Press Z in the mission first.")

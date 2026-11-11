@@ -8,13 +8,10 @@ Start from clean folders: deletes the tool outputs, the screenshots and the old 
 Deleted:
   - everything in <mission>\\output\\ (datasets, orthophotos, sessions, geolocation results),
     except trained models (runs\\ folders and *.pt files)
-  - the zpi folder in the Arma Screenshots folders (all screenshot sessions)
+  - the zpi folder in the Arma Screenshots folder (all screenshot sessions)
   - old Arma logs (*.rpt) and crash dumps (*.mdmp, *.bidmp) in %LOCALAPPDATA%\\Arma 3
     (the log of a game that is running right now is locked and stays)
 Kept: the mission files, the tools, the README, trained models, your game settings.
-
-Old layout (tools NOT inside the mission folder, e.g. Documents\\ZPI\\tools): the dataset* and
-ortho folders next to the tools folder are deleted instead of output\\.
 """
 from __future__ import annotations
 
@@ -42,39 +39,26 @@ def has_kept(p: Path) -> bool:
 
 def output_targets() -> list[Path]:
     out: list[Path] = []
-    if zpi_paths.MISSION_DIR is not None:
-        o = zpi_paths.OUTPUT_DIR
-        if o.is_dir():
-            for p in sorted(o.iterdir()):
-                if p.name in KEEP_NAMES or p.suffix.lower() in KEEP_SUFFIXES:
-                    continue
-                if has_kept(p):
-                    print(f"  (kept, holds trained models: {p})")
-                    continue
-                out.append(p)
-    else:                       # old layout: Documents\ZPI\tools -> Documents\ZPI\dataset*, ortho
-        here = zpi_paths.TOOLS_DIR.parent
-        out += sorted(p for p in here.glob("dataset*") if p.is_dir())
-        if (here / "ortho").is_dir():
-            out.append(here / "ortho")
+    o = zpi_paths.OUTPUT_DIR
+    if o.is_dir():
+        for p in sorted(o.iterdir()):
+            if p.name in KEEP_NAMES or p.suffix.lower() in KEEP_SUFFIXES:
+                continue
+            if has_kept(p):
+                print(f"  (kept, holds trained models: {p})")
+                continue
+            out.append(p)
     return out
 
 
 def main():
     print(zpi_paths.describe(), "\n")
     targets = output_targets()
-    for d in zpi_paths.screenshot_dirs():
-        if (d / "zpi").is_dir():
-            targets.append(d / "zpi")
-    logs = zpi_paths.rpt_dir()
+    if (zpi_paths.SCREENSHOT_DIR / "zpi").is_dir():
+        targets.append(zpi_paths.SCREENSHOT_DIR / "zpi")
+    logs = zpi_paths.RPT_DIR
     if logs.is_dir():
         targets += sorted(p for p in logs.iterdir() if p.is_file() and p.suffix.lower() in (".rpt", ".mdmp", ".bidmp"))
-
-    # never touch the mission itself (safety net)
-    m = zpi_paths.MISSION_DIR
-    if m is not None:
-        targets = [t for t in targets if t.resolve() != m.resolve() and m.resolve() not in t.resolve().parents
-                   or zpi_paths.OUTPUT_DIR.resolve() in t.resolve().parents]
 
     if not targets:
         print("Nothing to delete: already clean.")

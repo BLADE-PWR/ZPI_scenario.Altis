@@ -12,8 +12,6 @@
 // From SQF:
 //   "zpi_telemetry" callExtension "udp:127.0.0.1:5005"    set the target
 //   "zpi_telemetry" callExtension "ZPI|tel|{...}"          queue a record -> ""
-//   "zpi_telemetry" callExtension "stats"                  "queued,sent,dropped"
-//   "zpi_telemetry" callExtension "shutdown"               stop the sender (final)
 //
 // Build: extension\build.bat  (needs the MSVC build tools)
 // Install: copy zpi_telemetry_x64.dll next to Arma3_x64.exe. Arma appends the
@@ -53,7 +51,6 @@ SOCKET g_sock = INVALID_SOCKET;
 sockaddr_in g_addr{};
 
 std::atomic<bool> g_running{false};
-std::atomic<unsigned long long> g_queued{0}, g_sent{0}, g_dropped{0};
 std::thread g_sender;
 std::once_flag g_once;
 
@@ -86,31 +83,12 @@ void sender_loop() {
             addr = g_addr;
         }
         for (const std::string &record : batch) {
-            if (sock != INVALID_SOCKET &&
+            if (sock != INVALID_SOCKET) {
                 sendto(sock, record.data(), static_cast<int>(record.size()), 0,
-                       reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) > 0) {
-                g_sent.fetch_add(1, std::memory_order_relaxed);
-            } else {
-                g_dropped.fetch_add(1, std::memory_order_relaxed);
+                        reinterpret_cast<const sockaddr *>(&addr), sizeof(addr));
             }
         }
         batch.clear();
-    }
-}
-
-// Stop the sender and let go of the socket. Callable only from a real call,
-// never from DllMain, because joining under the loader lock can deadlock.
-void stop_sender() {
-    g_running.store(false, std::memory_order_relaxed);
-    g_wake.notify_all();
-    if (g_sender.joinable()) {
-        g_sender.join();
-    }
-    std::lock_guard<std::mutex> lock(g_target_mutex);
-    if (g_sock != INVALID_SOCKET) {
-        closesocket(g_sock);
-        g_sock = INVALID_SOCKET;
-        WSACleanup();
     }
 }
 
@@ -164,18 +142,15 @@ void set_target(const char *spec, char *output, int outputSize) {
 void enqueue(const char *record) {
     const size_t length = std::strlen(record);
     if (length == 0 || length > MAX_RECORD) {
-        g_dropped.fetch_add(1, std::memory_order_relaxed);
         return;
     }
     {
         std::lock_guard<std::mutex> lock(g_queue_mutex);
         while (g_queue.size() >= MAX_QUEUE) {
             g_queue.pop_front();
-            g_dropped.fetch_add(1, std::memory_order_relaxed);
         }
         g_queue.emplace_back(record, length);
     }
-    g_queued.fetch_add(1, std::memory_order_relaxed);
     g_wake.notify_one();
 }
 
@@ -200,18 +175,6 @@ __declspec(dllexport) void __stdcall RVExtension(char *output, int outputSize, c
     }
     if (std::strncmp(function, "udp:", 4) == 0) {
         set_target(function + 4, output, outputSize);
-        return;
-    }
-    if (std::strcmp(function, "stats") == 0) {
-        char text[96];
-        _snprintf_s(text, sizeof(text), _TRUNCATE, "%llu,%llu,%llu",
-                    g_queued.load(), g_sent.load(), g_dropped.load());
-        reply(output, outputSize, text);
-        return;
-    }
-    if (std::strcmp(function, "shutdown") == 0) {
-        stop_sender();
-        reply(output, outputSize, "ok");
         return;
     }
     if (std::strcmp(function, "version") == 0) {

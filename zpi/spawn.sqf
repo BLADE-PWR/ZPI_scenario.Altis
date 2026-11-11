@@ -2,7 +2,7 @@
 //  ZPI scene pack - spawning helpers and the ground-truth registry
 // =====================================================================
 
-ZPI_entities     = [];   // [id, object, cls, classname] - everything that gets ground truth
+ZPI_entities     = [];   // [id, object, cls] - everything that gets ground truth
 ZPI_sceneStatics = [];   // props (sandbags, nets) - logged once as events, no per-frame GT
 ZPI_sceneGroups  = [];
 ZPI_nextId       = 0;
@@ -22,7 +22,7 @@ ZPI_fnc_register = {
     ZPI_nextId = ZPI_nextId + 1;
     private _id = ZPI_nextId;
     _obj setVariable ["ZPI_id", _id];
-    ZPI_entities pushBack [_id, _obj, _cls, typeOf _obj];
+    ZPI_entities pushBack [_id, _obj, _cls];
     private _bb = boundingBoxReal _obj;
     ["spawn", format ['{"id":%1,"cls":"%2","classname":"%3","scene":"%4","seed":%5,"region":%6,"frame":%7,"pos_asl":%8,"dir_deg":%9,"bbox_min":%10,"bbox_max":%11}',
         _id, _cls, typeOf _obj, ZPI_sceneName, ZPI_cfg_seed, ZPI_regionId, diag_frameNo toFixed 0,

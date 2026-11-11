@@ -80,30 +80,8 @@ def default_rpts() -> list[Path]:
     """Every Arma log, oldest first (a new log starts at every game launch)."""
     files = zpi_paths.rpt_files()
     if not files:
-        sys.exit(f"No .rpt log files in {zpi_paths.rpt_dir()}. Play the mission once (without -noLogs), or pass --rpt")
+        sys.exit(f"No .rpt log files in {zpi_paths.RPT_DIR}. Play the mission once (without -noLogs), or pass --rpt")
     return files
-
-
-def default_shots_dirs() -> list[Path]:
-    return zpi_paths.screenshot_dirs()
-
-
-_by_name: dict[str, Path] | None = None
-
-
-def find_image(rel: str, shot_dirs: list[Path]) -> Path | None:
-    rel = rel.replace("\\", "/")
-    for d in shot_dirs:
-        p = d / rel
-        if p.exists():
-            return p
-    global _by_name                       # fallback: same file name anywhere under the screenshot folders
-    if _by_name is None:
-        _by_name = {}
-        for d in shot_dirs:
-            for p in d.rglob("*.png"):
-                _by_name.setdefault(p.name, p)
-    return _by_name.get(Path(rel).name)
 
 
 # ---------------------------------------------------------------- reading the log
@@ -188,7 +166,6 @@ def read_labels(rpts: list[Path], diag: Counter | None = None) -> list[dict]:
                 rp = rays.pop(key, {})
                 if rp:
                     r["pixel_rays"] = [ray for k in sorted(rp) for ray in rp[k]["rays"]]
-                r.pop("boxes", None)
                 done.append(r)
         diag["incomplete_shots"] += len(parts)   # a part was cut off: labels would be missing, skip the shot
     return done
@@ -378,7 +355,7 @@ def out_name(rec: dict) -> str:
     return f'{rec["session"]}_{Path(rec["image"].replace(chr(92), "/")).stem}'
 
 
-KEYPOINT_TYPES = ("soldier", "tank", "military vehicle", "explosion")    # ground point is meaningful for these
+KEYPOINT_TYPES = ("soldier", "tank", "military_vehicle", "explosion")    # ground point is meaningful for these
 
 
 def keypoint_field(e: dict, W: int, H: int) -> str:
@@ -397,24 +374,13 @@ def write_yaml(out: Path, classes: list[str], pose: bool = False):
     (out / "data.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-# ---------------------------------------------------------------- soldier boxes of older pictures
-# Before the fix, the mission labelled a soldier with ONE 3D box around his body projected into the
-# picture. Seen from above at an angle, that box's near-bottom corners land below the feet: the box
-# is loose at the bottom (10-40 % of its height) and a bit too wide. Pictures taken with the new
-# mission log both boxes for every soldier, so the tool learns how to turn the old box into the tight
-# one (per stance, depending on the camera pitch) and applies it to the soldiers of older pictures.
+# ---------------------------------------------------------------- soldiers without a tight box
+# When the body-part and hit-point boxes both fail, a soldier keeps ONE 3D box around his body, which
+# seen from above at an angle is loose at the bottom (10-40 % of its height) and a bit too wide. Every
+# soldier logs both boxes, so the tool learns how to turn the 3D box into the tight one (per stance,
+# depending on the camera pitch) and applies it to those soldiers.
 
 CAL_MIN_PAIRS = 40
-
-
-def rec_pitch(rec: dict) -> float | None:
-    cam = rec.get("cam") or {}
-    if cam.get("pitch") is not None:
-        return float(cam["pitch"])
-    z = cam.get("z_axis")
-    if z:
-        return math.degrees(math.asin(max(-1.0, min(1.0, float(z[2])))))
-    return None
 
 
 def _stance_key(o: dict) -> str:
@@ -427,14 +393,12 @@ def _edges(cx, cy, w, h):
 
 
 def fit_box_calibration(records: list[dict]) -> dict:
-    """Learn tight-box edges from the old 3D box: per stance, each edge offset (in units of the old
+    """Learn tight-box edges from the 3D box: per stance, each edge offset (in units of the 3D
     box width / height) = a + b * |pitch|/90, least squares. -> {stance: {...}} (only with enough pairs)."""
     import statistics
     pairs: dict[str, list] = {}
     for rec in records:
-        p = rec_pitch(rec)
-        if p is None:
-            continue
+        p = rec["cam"]["pitch"]
         for o in rec["objects"]:
             if o["kind"] != "s" or not o.get("box_3d") or o.get("soldier_box") == "3d_box" or o.get("inside_building"):
                 continue
@@ -462,18 +426,18 @@ def fit_box_calibration(records: list[dict]) -> dict:
             coef.append([round(a, 5), round(b, 5)])
             resid.append(round(statistics.median(abs(y - (a + b * x)) for x, y in zip(xs, ys)), 4))
         cal[st] = {"pairs": len(rows), "edges": ["left", "right", "top", "bottom"], "coef_a_b": coef,
-                   "median_residual_of_old_box_size": resid}
+                   "median_residual_of_3d_box_size": resid}
     return cal
 
 
 def apply_box_calibration(rec: dict, cal: dict, stats: Counter):
-    """Tighten the one-3D-box soldier boxes of an older picture with the learned calibration."""
-    p = rec_pitch(rec)
+    """Tighten the one-3D-box soldier boxes of a picture with the learned calibration."""
+    p = rec["cam"]["pitch"]
     for o in rec["objects"]:
         if o["kind"] != "s" or o.get("soldier_box") != "3d_box":
             continue
         c = cal.get(_stance_key(o)) or cal.get("ANY")
-        if c is None or p is None:
+        if c is None:
             stats["soldier_box_loose"] += 1
             continue
         x = abs(p) / 90.0
@@ -489,19 +453,9 @@ def apply_box_calibration(rec: dict, cal: dict, stats: Counter):
         stats["soldier_box_corrected"] += 1
 
 
-def have_pillow() -> bool:
-    try:
-        import PIL  # noqa: F401
-        return True
-    except ImportError:
-        return False
-
-
 def image_ok(p: Path) -> bool:
     """True if the PNG decodes completely (Arma can leave half-written files, a crash can leave
     files full of zeros)."""
-    if not have_pillow():
-        return True
     from PIL import Image
     try:
         if p.stat().st_size < 1000:
@@ -518,8 +472,6 @@ def image_ok(p: Path) -> bool:
 
 def green_fraction(p) -> float | None:
     """Share of the picture that is green (vegetation): hue 60-170 deg, not grey, not dark. p = path or PIL image."""
-    if not have_pillow():
-        return None
     from PIL import Image
     try:
         if isinstance(p, Image.Image):
@@ -535,26 +487,14 @@ def green_fraction(p) -> float | None:
     return round(g / max(n, 1), 4)
 
 
-def image_size(p: Path, rec: dict) -> tuple[int, int]:
-    if have_pillow():
-        from PIL import Image
-        with Image.open(p) as im:
-            return im.size
-    res = rec.get("res") or [1920, 1080]
-    return int(res[0]), int(res[1])
-
-
-# ---------------------------------------------------------------- per-screenshot JSON
-def _attitude(z_axis):
-    if not z_axis:
-        return None, None
-    x, y, z = z_axis
-    return round((math.degrees(math.atan2(x, y)) + 360) % 360, 2), round(math.degrees(math.asin(max(-1, min(1, z)))), 2)
+def image_size(p: Path) -> tuple[int, int]:
+    from PIL import Image
+    with Image.open(p) as im:
+        return im.size
 
 
 def build_meta(rec: dict, name: str, split: str, W: int, H: int, classes: list[str], scheme: str, ref_rel: str | None) -> dict:
     cam = rec.get("cam") or {}
-    hdg, pitch = _attitude(cam.get("z_axis"))
     laser = rec.get("laser")
     gsd = None
     if laser and laser.get("range") and cam.get("hfov"):
@@ -587,10 +527,9 @@ def build_meta(rec: dict, name: str, split: str, W: int, H: int, classes: list[s
         "world": rec.get("world"), "scene": rec.get("scene"), "seed": rec.get("seed"), "region": rec.get("region"),
         "camera": {"pos_asl": cam.get("pos_asl"), "grid": cam.get("grid"),
                    "alt_asl_m": cam.get("alt_asl"), "alt_agl_m": cam.get("alt_agl"),
-                   "heading_deg": cam.get("hdg", hdg), "pitch_deg": cam.get("pitch", pitch), "bank_deg": cam.get("bank"),
+                   "heading_deg": cam.get("hdg"), "pitch_deg": cam.get("pitch"), "bank_deg": cam.get("bank"),
                    "hfov_deg": cam.get("hfov"), "vfov_deg": cam.get("vfov"),
-                   "right_axis": cam.get("x_axis"), "up_axis": cam.get("y_axis"), "forward_axis": cam.get("z_axis"),
-                   "mode": cam.get("mode")},
+                   "right_axis": cam.get("x_axis"), "up_axis": cam.get("y_axis"), "forward_axis": cam.get("z_axis")},
         "intrinsics": ({"fx": round((W / 2) / math.tan(math.radians(float(cam["hfov"]) / 2)), 3),
                         "fy": round((H / 2) / math.tan(math.radians(float(cam["vfov"]) / 2)), 3),
                         "cx": W / 2, "cy": H / 2,
@@ -655,10 +594,10 @@ def process(records: list[dict], shot_dirs: list[Path], out: Path, args, seen: s
         name = out_name(rec)
         if name in seen:
             continue
-        if not rec.get("ok", True):
+        if not rec["ok"]:
             seen.add(name); stats["screenshot_failed"] += 1
             continue
-        src = find_image(rec["image"], shot_dirs)
+        src = zpi_paths.find_image(rec["image"], shot_dirs)
         if src is None:
             stats["image_missing"] += 1
             continue                       # maybe not written yet: retried in --watch mode
@@ -676,16 +615,12 @@ def process(records: list[dict], shot_dirs: list[Path], out: Path, args, seen: s
             continue
         # haze / exposure correction (tools/zpi_enhance.py); labels are unchanged
         enhanced = None
-        if args.enhance and have_pillow():
+        if args.enhance:
             try:
                 from PIL import Image
                 from zpi_enhance import enhance
                 with Image.open(src) as im:
                     enhanced = enhance(im)
-            except ImportError:
-                if not stats["enhance_unavailable"]:
-                    print("NOTE: no haze correction (needs numpy: pip install numpy)")
-                stats["enhance_unavailable"] += 1
             except Exception:
                 # damaged picture that slipped through the check (e.g. the PC crashed while saving)
                 seen.add(name)
@@ -697,17 +632,17 @@ def process(records: list[dict], shot_dirs: list[Path], out: Path, args, seen: s
             seen.add(name); stats["skipped_not_green"] += 1
             continue
         seen.add(name)
-        W, H = image_size(src, rec)
+        W, H = image_size(src)
 
         # explosions: measure the box from the reference picture when there is one
         ref_rel = rec.get("ref_image") or None
-        ref = find_image(ref_rel, shot_dirs) if ref_rel else None
+        ref = zpi_paths.find_image(ref_rel, shot_dirs) if ref_rel else None
         for o in rec["objects"]:
             if o["kind"] not in ("e", "f"):
                 continue
             what = "explosion" if o["kind"] == "e" else "tank_fire"
             o["box_method"] = "estimated"
-            if ref is not None and have_pillow():
+            if ref is not None:
                 try:
                     box = explosion_box_from_diff(ref, src, o, rec["objects"])
                 except Exception:
@@ -743,7 +678,7 @@ def process(records: list[dict], shot_dirs: list[Path], out: Path, args, seen: s
                     line += " " + keypoint_field(e, W, H)
                 lf.write(line + "\n")
         (out / "meta" / f"{name}.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
-        if args.previews and stats["previews"] < args.previews and have_pillow():
+        if args.previews and stats["previews"] < args.previews:
             try:
                 draw_preview(out / "images" / split / f"{name}.png", meta, out / "previews" / f"{name}.jpg")
                 stats["previews"] += 1
@@ -888,7 +823,7 @@ def main():
                     help="YOLO-pose labels: every box also gets one keypoint, the ground point (feet / under the hull / "
                          "impact point); train with a -pose model so the detector predicts the ground point directly")
     ap.add_argument("--no-box-fix", dest="box_fix", action="store_false",
-                    help="keep the loose one-3D-box soldier boxes of older pictures as they are")
+                    help="keep the loose one-3D-box soldier boxes as they are")
     ap.add_argument("--max-buildings", type=int, default=3,
                     help="leave out pictures with more labelled buildings than this (default 3, -1 = keep all)")
     ap.add_argument("--min-green", type=float, default=0.0,
@@ -897,7 +832,7 @@ def main():
     args = ap.parse_args()
 
     rpts = [Path(r) for r in args.rpt] if args.rpt else default_rpts()
-    shot_dirs = [Path(s) for s in args.shots] if args.shots else default_shots_dirs()
+    shot_dirs = [Path(s) for s in args.shots] if args.shots else [zpi_paths.SCREENSHOT_DIR]
     out = zpi_paths.out_path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     print(f"dataset folder: {out}")
@@ -905,9 +840,8 @@ def main():
 
     # one dataset = one class scheme (mixing would scramble the class numbers)
     scheme_file = out / "scheme.txt"
-    has_images = any((out / "images" / s).glob("*.png") for s in SPLITS if (out / "images" / s).exists())
     scheme = args.classes + ("+pose" if args.pose else "")
-    old_scheme = scheme_file.read_text(encoding="utf-8").strip() if scheme_file.exists() else ("legacy" if has_images else None)
+    old_scheme = scheme_file.read_text(encoding="utf-8").strip() if scheme_file.exists() else None
     if old_scheme and old_scheme != scheme:
         sys.exit(f"'{out}' was built with class scheme '{old_scheme}', not '{scheme}'.\n"
                  f"Delete the folder (everything is rebuilt from the logs) or use --out with another folder name.")
@@ -938,13 +872,13 @@ def main():
     records = read_labels(rpts, diag)
     # soldiers whose tight box failed (one 3D box): learn the correction from soldiers that have both boxes
     args.box_calibration = fit_box_calibration(records) if args.box_fix else {}
-    n_legacy = sum(1 for r in records for o in r["objects"] if o["kind"] == "s" and o.get("soldier_box") == "3d_box")
+    n_loose = sum(1 for r in records for o in r["objects"] if o["kind"] == "s" and o.get("soldier_box") == "3d_box")
     if args.box_calibration:
         (out / "box_calibration.json").write_text(json.dumps(args.box_calibration, indent=1), encoding="utf-8")
         print("soldier box correction (for soldiers without a tight box) learned from "
               + ", ".join(f"{k} {v['pairs']}" for k, v in args.box_calibration.items()) + " pairs (box_calibration.json)")
-    elif n_legacy and args.box_fix:
-        print(f"NOTE: {n_legacy} soldier boxes are one 3D box (loose at the bottom, the tight box failed). They are corrected\n"
+    elif n_loose and args.box_fix:
+        print(f"NOTE: {n_loose} soldier boxes are one 3D box (loose at the bottom, the tight box failed). They are corrected\n"
               f"      once the logs have {CAL_MIN_PAIRS}+ soldiers with both boxes.")
     sessions_all = list(dict.fromkeys(r["session"] for r in records))
     if args.latest and sessions_all:
@@ -953,7 +887,7 @@ def main():
         records = [r for r in records if r["session"] in set(args.session)]
         print(f"sessions used: {', '.join(args.session)} (of {len(sessions_all)} in the logs)")
     if args.limit:
-        records = [r for r in records if r.get("ok", True)][:args.limit]
+        records = [r for r in records if r["ok"]][:args.limit]
         print(f"limited to the first {len(records)} screenshots")
     if args.split == "auto":
         regions = {int(r.get("region", 0)) for r in records}
@@ -964,8 +898,6 @@ def main():
           f"{diag['cut_off_lines']}, unreadable lines {diag['invalid_lines']}, incomplete shots {diag['incomplete_shots']})")
     print(f"classes: {args.classes} -> {', '.join(classes)}")
     print(f"split: {args.split}")
-    if not have_pillow():
-        print("WARNING: Pillow is not installed: no previews, no measured explosion boxes. Run:  pip install pillow numpy")
 
     try:
         while True:
@@ -980,7 +912,7 @@ def main():
             if args.session:
                 records = [r for r in records if r["session"] in set(args.session)]
             if args.limit:
-                records = [r for r in records if r.get("ok", True)][:args.limit]
+                records = [r for r in records if r["ok"]][:args.limit]
             stats["image_missing"] = 0
     except KeyboardInterrupt:
         print("stopped")
@@ -1018,7 +950,7 @@ def main():
     if diag["invalid_lines"]:
         print(f"\nWARNING: {diag['invalid_lines']} lines could not be read. Please send this example:\n  {diag['example']}")
     if stats["image_missing"]:
-        miss = [r for r in records if r.get("ok", True) and find_image(r["image"], shot_dirs) is None]
+        miss = [r for r in records if r["ok"] and zpi_paths.find_image(r["image"], shot_dirs) is None]
         print(f"\nWARNING: {stats['image_missing']} labelled shots have no image file.")
         if miss:
             print(f"  e.g. looked for: {shot_dirs[0] / miss[0]['image'].replace(chr(92), '/')}")

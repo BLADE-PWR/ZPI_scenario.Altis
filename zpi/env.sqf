@@ -76,7 +76,7 @@ ZPI_fnc_nextWeather = {
     call ZPI_fnc_applyWeather;
 };
 
-// ---- artillery barrage: explosions for the "wybuch" class -------------------------
+// ---- artillery barrage ---------------------------------------------------------
 // Impacts land at least ZPI_cfg_barrageMinClear m from every scene object.
 // Each detonation is logged with its exact position (projectile "Explode" handler).
 ZPI_barrageRunning = false;

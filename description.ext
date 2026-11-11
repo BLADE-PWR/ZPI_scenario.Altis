@@ -50,67 +50,54 @@ class RscTitles {
             class Sentinel1 : ZPI_Square {
                 idc = 1099;
                 x = "safeZoneXAbs + 4 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit0 : ZPI_Square {
                 idc = 1100;
                 x = "safeZoneXAbs + 8 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit1 : ZPI_Square {
                 idc = 1101;
                 x = "safeZoneXAbs + 12 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit2 : ZPI_Square {
                 idc = 1102;
                 x = "safeZoneXAbs + 16 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit3 : ZPI_Square {
                 idc = 1103;
                 x = "safeZoneXAbs + 20 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit4 : ZPI_Square {
                 idc = 1104;
                 x = "safeZoneXAbs + 24 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit5 : ZPI_Square {
                 idc = 1105;
                 x = "safeZoneXAbs + 28 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit6 : ZPI_Square {
                 idc = 1106;
                 x = "safeZoneXAbs + 32 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit7 : ZPI_Square {
                 idc = 1107;
                 x = "safeZoneXAbs + 36 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit8 : ZPI_Square {
                 idc = 1108;
                 x = "safeZoneXAbs + 40 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit9 : ZPI_Square {
                 idc = 1109;
                 x = "safeZoneXAbs + 44 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit10 : ZPI_Square {
                 idc = 1110;
                 x = "safeZoneXAbs + 48 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
             class Bit11 : ZPI_Square {
                 idc = 1111;
                 x = "safeZoneXAbs + 52 * pixelW";
-                colorBackground[] = {0,0,0,1};
             };
         };
     };

@@ -21,7 +21,7 @@ git clone https://github.com/Matistan/ZPI_scenario.Altis
 Script-generated scenes with soldiers and armour are filmed by a camera a player flies himself or by the automatic dataset generator.
 
 - **P** takes a screenshot and labels it automatically: soldiers by stance (standing, kneeling, prone), tanks, military vehicles, explosions, tank gun fire (`tank_fire`) and buildings.
-- **Home** starts the **dataset generator**: it visits 23 scenes on green, open ground and makes `ZPI_cfg_tourTarget` labelled pictures by itself (1018 per run now: 982 + 1018 = 2000).
+- **Home** starts the **dataset generator**: it visits 23 scenes on green, open ground and makes `ZPI_cfg_tourTarget` labelled pictures by itself, or the stages of `ZPI_cfg_tourPlan`.
 - **Every screenshot gets a JSON file** with the camera telemetry and intrinsics, the laser-rangefinder reading, a terrain height grid under the view and the map coordinates of every labelled object.
 - **Z** flies an orthophoto of the scene area, which `tools/make_ortho.py` turns into a georeferenced map with the soldiers drawn on it.
 
@@ -113,7 +113,7 @@ The readout and the crosshair are UI, so they never appear in **P** screenshots:
 | B | artillery barrage around the point you are looking at |
 | I | automatic screenshot when an explosion happens on screen, on/off (default on) |
 | Z | orthophoto of the scene area (takes about a minute; no input during the flight) |
-| **Home** | **dataset generator:** makes 1000 labelled images by itself (clear weather, noon). Home again stops it |
+| **Home** | **dataset generator:** runs ZPI_cfg_tourPlan (about 1850 pictures) by itself. Home again stops it |
 
 **Scenes:**
 
@@ -169,7 +169,7 @@ The readout and the crosshair are UI, so they never appear in **P** screenshots:
 
 ## Dataset generator (Home)
 
-Press **Home** and leave the game running: the mission makes **1000 labelled screenshots on its own** (`ZPI_cfg_tourTarget`), always in clear weather at noon. For every location marker it goes through a shuffled list of scenes (`ZPI_cfg_tourScenes`: all 23 except "mixed"; tank columns, patrols, lone-building entries and kneeling / prone groups are listed twice, so they come twice per round), with a new layout every time. The first scene of a run is always the tank-firing scene, so even a short test has firing pictures.
+Press **Home** and leave the game running: the mission makes `ZPI_cfg_tourPlan` (about 1850) images(`ZPI_cfg_tourTarget`), always in clear weather at noon. For every location marker it goes through a shuffled list of scenes (`ZPI_cfg_tourScenes`: all 23 except "mixed"; tank columns, patrols, lone-building entries and kneeling / prone groups are listed twice, so they come twice per round), with a new layout every time. The first scene of a run is always the tank-firing scene, so even a short test has firing pictures.
 
 **Plan: stages with their own targets (`ZPI_cfg_tourPlan`).** One Home press can run several stages one after another. Each stage is `[profile, pictures]`; the profile (`ZPI_tourProfiles` in `config.sqf`) changes some `ZPI_cfg_*` settings for that stage only (which scenes, how many pictures per scene, zoom, camera distance and angle, explosions, ...). The current plan, about 1850 pictures (~4 hours, ~25 GB of screenshots):
 
@@ -184,15 +184,15 @@ Press **Home** and leave the game running: the mission makes **1000 labelled scr
 
 The numbers are pictures, not boxes. Each picture's JSON says `"tour_stage"`, `manifest.csv` has a `tour_stage` column, and `make_yolo_dataset.py` prints how many pictures contain each class and how many came from each stage. To continue a plan after a stop, remove the finished stages from `ZPI_cfg_tourPlan` (or lower their numbers); `ZPI_cfg_tourPlan = [];` runs the normal generator (`ZPI_cfg_tourScenes`, `ZPI_cfg_tourTarget`). Raise `maxScreenShotFolderSizeMB` in your `.Arma3Profile` (with the game closed) so the new screenshots fit next to the old ones.
 
-**Soldier size.** Measured on the October pictures: a soldier's longest box side is about K / zoom pixels, K ≈ 0.95 m kneeling, 1.2–1.7 m standing, 1.6–2.1 m prone. The normal soldier zoom (0.009–0.0115 m/px) therefore gives about 90–170 px, the far zoom (0.025–0.06 m/px) about 20–60 px. Build with `--classes size` if the detector should tell small from large soldiers.
+**Soldier size.** A soldier's longest box side is about K / zoom pixels, K ≈ 0.95 m kneeling, 1.2–1.7 m standing, 1.6–2.1 m prone. The normal soldier zoom (0.009–0.0115 m/px) therefore gives about 90–170 px, the far zoom (0.025–0.06 m/px) about 20–60 px. Build with `--classes size` if the detector should tell small from large soldiers.
 
-**No repeats between runs.** Every mission start writes its screenshots into a new folder (`Screenshots\zpi\<start time>\`), and the layout seed of every scene continues from where the last generator run on this PC stopped (stored in the Arma profile, starting at 1000; runs before this version used seeds below 1000). Sites and camera positions are random anyway, so no two runs repeat a picture.
+**No repeats between runs.** Every mission start writes its screenshots into a new folder (`Screenshots\zpi\<start time>\`), and the layout seed of every scene continues from where the last generator run on this PC stopped (stored in the Arma profile, starting at 1000). Sites and camera positions are random anyway, so no two runs repeat a picture.
 
 **Sites.** Each scene gets its own site within 3 km of the marker (`ZPI_cfg_siteRadius`): the greenest ground with the fewest buildings that suits the scene (open field, country road, or a lone building / farm). The region (train/val/test split) stays the marker number. If the best site near a marker is still not very green, a message says so; place markers in greener parts of the map then.
 
 **Bursts.** The camera stays at one position and takes a picture **every 2 s** (`ZPI_cfg_burstInterval`), 5 pictures for moving scenes and 3 for static ones; then it moves to the next position. So the movement of soldiers and tanks shows between the pictures of one burst. Burst pictures are named `<scene>_b<burst>_<n>_<frame>.png` (e.g. `tank_column_b0042_3_00123456.png` = burst 42, picture 3), and the JSON has `"burst": {"id": 42, "index": 3, "length": 5}`. The camera aims where the targets will be in the middle of the burst, so they move through the picture.
 
-**One soldier size everywhere.** Every generator picture that can contain soldiers uses the same zoom: soldier close-ups, groups, building scenes, patrols, static vehicle scenes and tank firing at 0.009–0.0115 m/px (`ZPI_cfg_tourSoldierGSD`). A soldier is therefore always about 55–90 px, so the detector does not have to learn many sizes of the same class. Only driving columns (no soldiers in view) and explosion pictures (shot away from the soldiers) are filmed wider.
+**One soldier size everywhere.** Every generator picture that can contain soldiers uses the same zoom: soldier close-ups, groups, building scenes, patrols, static vehicle scenes and tank firing at 0.009–0.0115 m/px (`ZPI_cfg_tourSoldierGSD`). A soldier is therefore always about 90–170 px, so the detector does not have to learn many sizes of the same class. Only driving columns (no soldiers in view) and explosion pictures (shot away from the soldiers) are filmed wider.
 
 **At most 3 buildings per picture** (`ZPI_cfg_maxBuildings`; lone-building scenes: 1, `ZPI_cfg_loneMaxBuildings`). Before a burst, the generator counts the buildings that would get a box; if there are more, it tries another angle at the same zoom, up to 4 times (`ZPI_cfg_viewTries`), and otherwise skips that view.
 
@@ -204,9 +204,9 @@ The numbers are pictures, not boxes. Each picture's JSON says `"tour_stage"`, `m
 | building entries (-, Shift+1 … Shift+4, Shift+0) | **15–25 pictures per scene**, at most 8 soldiers, about half go in: the squad walking up together, gathering at the door, going in one by one, the rest waiting outside. The camera aims at the soldiers outside (plus the door once they are near it), at the same zoom as all soldier pictures; the camera stays on the side where the squad waits, so nobody outside is hidden by the building |
 | groups down (Shift+-) | bursts of 3 on a whole group or part of it, half at 30–45°, half at 35–60°; nobody moves |
 | tanks in static scenes (6, 2, 7, 8) | after the normal pictures, 2 firing episodes (`ZPI_cfg_tourFiringPerScene`), like the tank-firing scene |
-| tanks firing (Shift+6) | **first scene of every run**; the camera goes beside a tank at the soldier scale (`ZPI_cfg_tourFireGSD`, tank and muzzle blast still fit); the tank turns its turret, the camera holds still for a reference picture (at least 2 s after the previous shot, so no old flames are in it), the shot triggers the picture automatically 0.05 s later, two more follow while the smoke drifts |
+| tanks firing (Shift+6) | **first scene of every run**; the camera goes beside a tank at the soldier scale (`ZPI_cfg_tourFireGSD`, tank and muzzle blast still fit); the tank turns its turret, the camera holds still for a reference picture (at least 2 s after the previous shot, so no old flames are in it), the shot triggers the picture automatically 0.05 s later, `ZPI_cfg_tourFiringExtra` more follow while the smoke drifts |
 
-Each scene except the negatives, the building scenes and tank firing also gets one explosion picture with a measured box. It is **zoomed out** (0.03–0.045 m/px, picture 58–86 m wide, `ZPI_cfg_tourExplosionGSD`) and aimed at the middle of the smoke column, so the smoke is a part of the picture and the measured box fits it (zoomed in, the smoke filled the whole picture). Images per scene are set in `ZPI_cfg_tourShots` (6–25). One round over the 31 scene visits gives about 520 images, so 1018 images take about 2 hours and ~12 GB of disk. Mouse and keys (except Home, U and H) are ignored while it runs. Press **Home** again to stop after the current picture. All settings are in the `ZPI_cfg_tour*`, `ZPI_cfg_burst*` and "clean, green pictures" blocks of `config.sqf`.
+Each scene except the negatives, the building scenes and tank firing also gets one explosion picture with a measured box. It is **zoomed out** (0.03–0.045 m/px, picture 58–86 m wide, `ZPI_cfg_tourExplosionGSD`) and aimed at the middle of the smoke column, so the smoke is a part of the picture and the measured box fits it. Images per scene are set in `ZPI_cfg_tourShots` (6–25). One round over the 31 scene visits gives about 520 images per hour, ~6 GB. Mouse and keys (except Home, U and H) are ignored while it runs. Press **Home** again to stop after the current picture. All settings are in the `ZPI_cfg_tour*`, `ZPI_cfg_burst*` and "clean, green pictures" blocks of `config.sqf`.
 
 **Green.** The camera films from 120–300 m (columns 220–450 m). Far away, Arma shows the low-detail ground texture through a lot of haze, which makes the pictures pale brown; closer in, the grass and its colour come through. After every move the camera waits 3.5 s (`ZPI_cfg_tourSettle`) so the sharp textures have loaded.
 
@@ -241,7 +241,7 @@ The class names are chosen when the dataset is built (`--classes`), so you never
 
 ## Explosions
 
-Explosions are not objects in the game, so the game can only *estimate* their box. The box is now **measured from the image** instead:
+Explosions are not objects in the game, so the game can only *estimate* their box. The box is **measured from the image** instead:
 
 1. Just before a shell lands, the camera and zoom are held still: the HUD shows `[CAMERA HELD]` for up to 5 s. The script then takes a reference picture (`ref_….png`). This happens for the barrage (**B**), for tank fire (**K**) and for the generator's explosion close-ups and firing pictures.
 2. 0.35 s after the explosion, the labelled screenshot is taken from exactly the same view.
@@ -303,7 +303,7 @@ There is one file per screenshot, with the same name as the image:
 | `objects[].ground_pos_asl` | where the object stands: a soldier's feet (floor height inside buildings), the terrain under a vehicle's or building's centre, an explosion's impact point; cm precision |
 | `objects[].ground_px` | that ground point projected into the image, in pixels (the keypoint of `--pose` labels) |
 
-Why the precision changed: map positions near 13 km are only exact to about 1 mm in the game's 32-bit floats. The camera axes are measured over 1 km, and the FOV is computed exactly from the FOV setting and the screen aspect ratio. Labels use the same camera model, so boxes got slightly more exact too.
+Precision. map positions near 13 km are only exact to about 1 mm in the game's 32-bit floats. The camera axes are measured over 1 km, and the FOV is computed exactly from the FOV setting and the screen aspect ratio. Labels use the same camera model, so boxes got slightly more exact too.
 
 ## Orthophoto (Z)
 
@@ -370,13 +370,11 @@ It reports per class: CEP50 (= median horizontal error), CEP90 (90th percentile)
 
 **Bottom vs centre.** On older pictures, the label boxes gave CEP50 ≈ 0.9 m for soldiers and ≈ 3.4 m for tanks with the bottom-centre, and ≈ 0.5 m and ≈ 1.6 m with `--anchor center`. Seen at an angle, a box's bottom edge is the *near* edge of the vehicle, not its centre. `--anchor center` uses the box centre and assumes it is half the object's height above the ground (soldier 0.9 m, vehicle 1.2 m).
 
-Pictures taken before this version have no terrain grid and no ground points. The tool then intersects each object's ray with a flat plane at the object's own true height (so terrain error is left out) and says so. Take new pictures for the real numbers.
-
 ## Telemetry and ground truth
 
 Every frame the mission logs the camera pose, FOV, laser range and platform position. Every object is logged at spawn, and true positions are logged every 10 frames. `python tools\rpt_extract.py` writes them as JSONL to `output\sessions\`
 
-`extension\zpi_telemetry.cpp` is the .dll extention that does the same thing, but works instantly, much faster than writing logs in the RPT file and then reading them. The same `ZPI|<type>|<json>` lines that are written to the RPT file go through `callExtension` and out on a UDP socket. This is essential to map objects detected with a drone camera in real time, because the RPT log is ~200 ms behind the game.
+`extension\zpi_telemetry.cpp` is the .dll extension that does the same thing, but works instantly, much faster than writing logs in the RPT file and then reading them. The same `ZPI|<type>|<json>` lines that are written to the RPT file go through `callExtension` and out on a UDP socket. This is essential to map objects detected with a drone camera in real time, because the RPT log is ~200 ms behind the game.
 
 **Build and test the extension**
 
@@ -398,7 +396,7 @@ python -c "import socket; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.b
 
 ## Screenshot quality
 
-**Why the pictures looked washed out.** Arma's automatic exposure opens up when the camera sees little sky. A drone camera looking down at sunlit ground therefore comes out over-exposed (average brightness ~190 of 255, burnt-out highlights). Flat noon light and distance haze add a grey-white veil on top. Three fixes:
+**Exposure.** Arma's automatic exposure opens up when the camera sees little sky. A drone camera looking down at sunlit ground therefore comes out over-exposed (average brightness ~190 of 255, burnt-out highlights). Flat noon light and distance haze add a grey-white veil on top. Three things counter it:
 
 1. **Fixed exposure.** A fixed exposure is used at noon in clear weather; raise it if pictures are too bright, lower it if too dark.
 2. **Closer camera, more loading time.** The generator films from 120–300 m (columns 220–450 m) and waits 3.5 s at each new position before the first picture, so the sharp ground textures have loaded (`ZPI_cfg_tourDist`, `ZPI_cfg_tourSettle`).
@@ -409,24 +407,7 @@ python -c "import socket; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.b
    ```
    To try it on single pictures: `python tools\zpi_enhance.py shot.png --compare` (writes a before/after JPEG).
 
-## Status
-
-**Verified in the game** (October 2026 runs, ~1000 generator pictures):
-- HUD, laser rangefinder, constant pixel size;
-- camera model: `projection_check_px` 0.00 px, hfov and vfov agree with square pixels; step 1 of `eval_geolocation.py` is centimetres;
-- dataset generator: green sites, ≤ 3 buildings, bursts, building scenes with 8 soldiers (4 go in), one soldier scale;
-- tank firing: automatic pictures with measured `tank_fire` boxes, in the tour and with **K**;
-- explosions: measured boxes on real pairs (smoke column above the impact point);
-- exposure test, haze correction;
-- dataset tool on a session cut off by a PC crash (broken PNGs skipped);
-- all tools run from `<mission>\tools` with outputs in `output\` (tested on a copy of real sessions).
-
-**New in this version, check on the first run:**
-1. **Tight soldier boxes:** build the dataset and read the "box bottom below the feet" lines at the end: `body_parts` should be near 0 (a few % for boots and toes); look at a few previews. If most soldiers say `hit_point_parts`, the game gave no animated body parts (still fine, a bit looser).
-2. **New scenes** (Shift+7 … Shift+0, Shift+-): press each once and look; groups down should stay kneeling / prone, the lone building should have no other house nearby.
-3. **Explosion pictures:** the smoke column should be a part of the picture, not fill it.
-
-**Check after changing things:**
+## Troubleshooting
 1. **HUD** missing after an update: re-open the mission in Eden (`description.ext` is only read then).
 2. **Building scenes** say "No enterable building with few others around": move the scene (L or C) near a farm or lone house.
 3. **Green sites:** if green-looking ground shows a `GROUND` name that scores 0 in the HUD, add it to `ZPI_cfg_surfaceGreen` in `config.sqf`.

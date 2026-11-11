@@ -17,9 +17,7 @@ Usage (from the mission folder; output goes to <mission>\\output\\sessions):
 from __future__ import annotations
 
 import argparse
-import glob
 import json
-import os
 import re
 import sys
 import time
@@ -31,10 +29,6 @@ import zpi_paths  # noqa: E402
 
 LINE_RE = re.compile(r"ZPI\|(tel|gt|spawn|evt)\|(.*)$")
 GT_FIELDS = ("id", "pos_asl", "dir_deg", "vel", "stance")
-
-
-def default_rpt_dir() -> Path:
-    return zpi_paths.rpt_dir()
 
 
 def parse_line(line: str):
@@ -98,8 +92,6 @@ class Session:
 
 
 def extract(rpts, out_root: Path) -> list[Session]:
-    if isinstance(rpts, Path):
-        rpts = [rpts]
     sessions: list[Session] = []
     current: Session | None = None
     bad = 0
@@ -126,8 +118,6 @@ def extract(rpts, out_root: Path) -> list[Session]:
         if current:
             current.close()
             current = None
-    if current:
-        current.close()
     for s in sessions:
         summary = ", ".join(f"{k}={v}" for k, v in sorted(s.counts.items()))
         print(f"{s.dir}: {summary}")
@@ -138,16 +128,16 @@ def extract(rpts, out_root: Path) -> list[Session]:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("rpt", nargs="?", help="RPT file (default: newest in %%LOCALAPPDATA%%\\Arma 3)")
+    ap.add_argument("rpt", nargs="?", help="RPT file (default: all logs in %%LOCALAPPDATA%%\\Arma 3)")
     ap.add_argument("-o", "--out", default="sessions", help="output folder; a plain name goes into the mission's output\\ folder")
     args = ap.parse_args()
 
     if args.rpt:
         rpts = [Path(args.rpt)]
     else:   # every log, oldest first: a new log starts at each game launch
-        rpts = sorted((Path(p) for p in glob.glob(str(default_rpt_dir() / "*.rpt"))), key=os.path.getmtime)
+        rpts = zpi_paths.rpt_files()
         if not rpts:
-            sys.exit(f"No .rpt files in {default_rpt_dir()}")
+            sys.exit(f"No .rpt files in {zpi_paths.RPT_DIR}")
     extract(rpts, zpi_paths.out_path(args.out))
 
 

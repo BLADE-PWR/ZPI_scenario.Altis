@@ -64,9 +64,9 @@ ZPI_center       = [0, 0, 0];
     call ZPI_fnc_createCamera;
     call ZPI_fnc_initKeys;
 
-    ["session_start", format ['{"world":"%1","faction":"%2","locations":%3,"product":"%4","version":"%5","resolution":%6,"session":"%7","yolo_classes":%8}',
+    ["session_start", format ['{"world":"%1","faction":"%2","locations":%3,"product":"%4","version":"%5","resolution":%6,"session":"%7"}',
         worldName, ZPI_cfg_faction, count ZPI_locations, productVersion select 0, productVersion select 2,
-        str ((getResolution) select [0, 2]), ZPI_sessionTag, str ZPI_yoloClasses]] call ZPI_fnc_event;
+        str ((getResolution) select [0, 2]), ZPI_sessionTag]] call ZPI_fnc_event;
 
     addMissionEventHandler ["EachFrame", { call ZPI_fnc_onFrame }];
 

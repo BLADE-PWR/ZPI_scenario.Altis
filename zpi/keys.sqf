@@ -129,7 +129,6 @@ ZPI_fnc_onKey = {
             showChat (ZPI_quietMode == 0);
             if (ZPI_quietMode != 0) then {
                 call ZPI_fnc_hideHud;
-                ("ZPI_msgLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
                 hintSilent "";
                 ZPI_helpOpen = false;
             } else {

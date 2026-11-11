@@ -168,12 +168,10 @@ ZPI_fnc_zoom = {                  // _z > 0 zoom in, < 0 zoom out
 };
 
 // ---- frame-number bar ------------------------------------------------
-// 2 sentinel squares (white, black) + 12 data bits, LSB first, 4x4 px each,
-// in the very corner of the screen. Decoder: tools/frame_code.py 12 bits
-// wrap every 4096 frames (68 s at 60 fps); the telemetry stream carries the frame
-// number in full, so the bar only has to say which recent frame this is.
-// Note: the screenshot command does not capture UI, so the bar is only in
-// screen captures (e.g. with OBS), never in screenshots taken with the P key.
+// 2 sentinel squares (white, black) + 12 data bits, LSB first, 4x4 px each, in the very corner
+// of the screen; decoder: tools/frame_code.py. 12 bits wrap every 4096 frames (68 s at 60 fps);
+// the telemetry stream carries the full frame number. The screenshot command does not capture UI,
+// so the bar is only in screen captures (e.g. OBS), never in screenshots taken with the P key.
 ZPI_fnc_hideHud = {
     ("ZPI_hudLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
 };

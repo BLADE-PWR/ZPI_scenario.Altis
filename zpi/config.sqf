@@ -66,7 +66,7 @@ ZPI_cfg_orthoOverlap = 0.2;      // fraction of tile overlap
 ZPI_cfg_orthoSettle  = 1.2;      // s to wait at each tile (terrain and objects load in)
 
 // ---- dataset generator (Home key) ---------------------------------------------------------
-ZPI_cfg_tourTarget    = 1018;    // images to generate in one run (982 + 1018 = 2000)
+ZPI_cfg_tourTarget    = 1018;    // images to generate in one run (only used when ZPI_cfg_tourPlan is [])
 ZPI_cfg_tourTime      = 1;       // index into the time presets: 1 = noon
 ZPI_cfg_tourWeather   = 0;       // index into the weather presets: 0 = clear
 // scenes per location visit (keys: 1-9, 10 = -, 11 = [, 12 = ], 13-22 = Shift+1 ... Shift+0, 23 = Shift+-).
@@ -83,7 +83,7 @@ ZPI_cfg_tourExplosions = 1;      // explosion close-ups per scene visit
 // ONE scale for every generator picture that can contain soldiers (close-ups, groups, building
 // scenes, static vehicle scenes, tank firing, explosion close-ups): a soldier always has about
 // the same pixel size, so the detector does not have to learn many sizes of the same class.
-ZPI_cfg_tourSoldierGSD = [0.009, 0.0115]; // m/px (picture 17-22 m wide; soldier ~90-170 px, measured on the October pictures)
+ZPI_cfg_tourSoldierGSD = [0.009, 0.0115]; // m/px (picture 17-22 m wide; soldier ~90-170 px)
 ZPI_cfg_tourExplosionGSD = [0.03, 0.045];  // explosion pictures: zoomed out (58-86 m wide), the smoke column is a
                                            // part of the picture, not all of it, so the measured box fits the smoke
 ZPI_cfg_tourGroupRadius = 8;             // m: soldiers within this distance are aimed at together
@@ -100,8 +100,8 @@ ZPI_cfg_tourElevSoldier = [35, 60];      // soldier shots: lower, so more of the
 ZPI_cfg_tourElevPatrol = [30, 45];       // walking patrols and kneeling / prone groups: flatter, more from the side
 ZPI_cfg_tourElevColumn = [30, 60];       // driving columns: from the side as well as from above
 
-// soldiers from far away (the "far" stage below): ~20-60 px. Measured on the October pictures: a soldier's
-// longest box side is about K / GSD px with K ~0.95 m kneeling, 1.2-1.7 m standing, 1.6-2.1 m prone.
+// soldiers from far away (the "far" stage below): ~20-60 px. A soldier's longest box side is
+// about K / GSD px with K ~0.95 m kneeling, 1.2-1.7 m standing, 1.6-2.1 m prone.
 ZPI_cfg_tourFarGSD     = [0.025, 0.06];   // picture 48-115 m wide
 ZPI_cfg_tourFiringExtra = 1;             // pictures after each tank shot (smoke); the shot itself is always taken
 ZPI_cfg_tourExplosionFrames = 1;         // pictures per explosion: 1 = at 0.35 s; 2 = also at ~1.3 s (same reference)

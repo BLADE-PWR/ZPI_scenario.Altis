@@ -371,7 +371,7 @@ ZPI_fnc_tourScene = {
         };
         // ---- tanks firing: camera beside a tank, zoomed so tank and muzzle blast fill the picture.
         //      The tank turns its turret, the camera holds still for the reference picture, the
-        //      shot triggers the picture automatically (label "tank_fire"); two more follow (smoke).
+        //      shot triggers the picture automatically (label "tank_fire"); ZPI_cfg_tourFiringExtra more follow (smoke).
         case (_scene == 18): {
             sleep 3;
             while { call _more } do {
@@ -507,22 +507,18 @@ ZPI_fnc_tourRounds = {
 // pictures of the normal scene list.
 ZPI_tourStage = "";
 ZPI_fnc_tourDataset = {
-    params [["_target", -1]];
     if (ZPI_tourRunning) exitWith { ["Generator already running"] call ZPI_fnc_msg };
     ZPI_tourRunning = true;
     ZPI_tourStop = false;
     ZPI_autoCapture = false;
     ZPI_firefight = false;
     ZPI_tourRunStart = ZPI_shotCount;
-    private _plan = if (_target > 0 || {ZPI_cfg_tourPlan isEqualTo []}) then {
-        [["", [ZPI_cfg_tourTarget, _target] select (_target > 0)]]
-    } else { ZPI_cfg_tourPlan };
+    private _plan = [ZPI_cfg_tourPlan, [["", ZPI_cfg_tourTarget]]] select (ZPI_cfg_tourPlan isEqualTo []);
     private _total = 0;
     { _total = _total + (_x select 1) } forEach _plan;
     // Layout seeds never repeat between runs: every run continues where the last run on this PC
     // stopped (kept in the Arma profile, saved after every scene, so also after a crash).
-    // Runs before this version used seeds below 1000.
-    ZPI_cfg_seed = (profileNamespace getVariable ["ZPI_nextTourSeed", 1000]) max 1000;
+    ZPI_cfg_seed = profileNamespace getVariable ["ZPI_nextTourSeed", 1000];
     if (ZPI_cfg_seed > 16000) then { ZPI_cfg_seed = 1000 };          // seeds stay exact in 32-bit floats
     ["tour_start", format ['{"target":%1,"burst":%2,"interval":%3,"max_buildings":%4,"first_seed":%5,"plan":%6}',
         _total, ZPI_cfg_burstShots, ZPI_cfg_burstInterval, ZPI_cfg_maxBuildings, ZPI_cfg_seed,

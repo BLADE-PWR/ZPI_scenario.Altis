@@ -62,7 +62,6 @@ ZPI_fnc_pad = {                  // [number, width] -> zero-padded string
 
 ZPI_udp_enabled = false;
 ZPI_fnc_initExtension = {
-    ZPI_udp_enabled = false;
     if (!ZPI_cfg_udp) exitWith {};
     private _version = ZPI_cfg_extension callExtension "version";
     if (_version isEqualTo "") exitWith {

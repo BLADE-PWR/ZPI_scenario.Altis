@@ -27,10 +27,6 @@ Usage (from the mission folder; --dataset and --out are folders inside <mission>
 --anchor keypoint (dataset built with make_yolo_dataset.py --pose, model trained as YOLO-pose): step 2
 uses the labelled ground point itself (= step 1), step 3 the keypoint the detector predicts.
 Output: <out>/per_object.csv, <out>/summary.json and a table on screen.
-
-Pictures taken before the precision fix (no terrain grid, no ground points) still work: each
-object is then intersected with a flat plane at its own true height ("oracle" terrain) and the
-ground point is the object position, so terrain error is left out; the script says so.
 """
 from __future__ import annotations
 
@@ -59,7 +55,6 @@ def dot(a, b): return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 def norm(a):
     n = math.sqrt(dot(a, a))
     return [a[0] / n, a[1] / n, a[2] / n]
-def cross(a, b): return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 
 
 # ---------------------------------------------------------------- camera
@@ -68,15 +63,9 @@ class Camera:
         c = meta["camera"]
         self.W, self.H = meta["width"], meta["height"]
         self.o = c["pos_asl"]
-        # orthonormal axes (older pictures logged axes rounded to 1/1024, not quite orthogonal)
-        self.f = norm(c["forward_axis"])
-        r = c["right_axis"]
-        self.r = norm(sub(r, mul(self.f, dot(r, self.f))))
-        self.u = cross(self.r, self.f)
-        if dot(self.u, c["up_axis"]) < 0:
-            self.u = mul(self.u, -1)
+        self.r, self.u, self.f = c["right_axis"], c["up_axis"], c["forward_axis"]
         self.tx = math.tan(math.radians(c["hfov_deg"]) / 2)
-        self.ty = self.tx * self.H / self.W if square_pixels or not c.get("vfov_deg") else math.tan(math.radians(c["vfov_deg"]) / 2)
+        self.ty = self.tx * self.H / self.W if square_pixels else math.tan(math.radians(c["vfov_deg"]) / 2)
         self.heading = math.atan2(self.f[0], self.f[1])
 
     def project(self, p):
@@ -96,28 +85,15 @@ class Camera:
 
 # ---------------------------------------------------------------- terrain
 class Terrain:
-    """Bilinear DEM from the picture's terrain grid; flat plane when there is none."""
+    """Bilinear DEM from the picture's terrain grid."""
 
     def __init__(self, meta: dict):
-        g = meta.get("terrain_grid")
-        self.grid = g
-        self.plane = None
-        if g:
-            self.x0, self.y0, self.d = g["x0"], g["y0"], g["spacing_m"]
-            self.h = g["heights_asl"]
-            self.nx, self.ny = len(self.h[0]), len(self.h)
-        else:
-            lr = meta.get("laser_rangefinder")
-            if lr and lr.get("pos_asl"):
-                self.plane = lr["pos_asl"][2]
-
-    @property
-    def ok(self):
-        return self.grid is not None or self.plane is not None
+        g = meta["terrain_grid"]
+        self.x0, self.y0, self.d = g["x0"], g["y0"], g["spacing_m"]
+        self.h = g["heights_asl"]
+        self.nx, self.ny = len(self.h[0]), len(self.h)
 
     def height(self, x, y):
-        if self.grid is None:
-            return self.plane
         fx = min(max((x - self.x0) / self.d, 0), self.nx - 1.000001)
         fy = min(max((y - self.y0) / self.d, 0), self.ny - 1.000001)
         i, j = int(fx), int(fy)
@@ -125,11 +101,6 @@ class Terrain:
         h = self.h
         return ((h[j][i] * (1 - ax) + h[j][i + 1] * ax) * (1 - ay) +
                 (h[j + 1][i] * (1 - ax) + h[j + 1][i + 1] * ax) * ay)
-
-    def inside(self, x, y):
-        if self.grid is None:
-            return True
-        return self.x0 <= x <= self.x0 + (self.nx - 1) * self.d and self.y0 <= y <= self.y0 + (self.ny - 1) * self.d
 
     def intersect(self, o, d, tmax=8000.0, lift=0.0):
         """first point where the ray o + t*d goes below the terrain (raised by lift m); returned on the terrain"""
@@ -141,11 +112,6 @@ class Terrain:
         return [hit[0], hit[1], self.height(hit[0], hit[1])]
 
     def _intersect(self, o, d, tmax):
-        if self.grid is None:
-            if self.plane is None or d[2] >= 0:
-                return None
-            t = (self.plane - o[2]) / d[2]
-            return add(o, mul(d, t)) if t > 0 else None
         step = self.d / 3
         # jump straight to just above the highest terrain point, then march
         hmax = max(max(r) for r in self.h)
@@ -154,7 +120,7 @@ class Terrain:
         t = 0.0
         if d[2] < 0 and o[2] > hmax:
             t = max(0.0, (o[2] - hmax) / -d[2] - step)
-        prev_t, prev_f = None, None
+        prev_t = None
         while t < tmax:
             p = add(o, mul(d, t))
             f = p[2] - self.height(p[0], p[1])
@@ -170,7 +136,7 @@ class Terrain:
                     else:
                         hi = mid
                 return add(o, mul(d, (lo + hi) / 2))
-            prev_t, prev_f = t, f
+            prev_t = t
             t += step
         return None
 
@@ -246,18 +212,15 @@ def main():
     pix_off = defaultdict(list)        # type -> (dx, dy) box bottom-centre minus ground point, px
     proj_chk = []
     model_vs_game = []
-    n_flat = n_off_terrain = 0
+    n_off_terrain = 0
     det_total = det_matched = gt_total = 0
 
     for mp in metas:
         m = json.loads(mp.read_text(encoding="utf-8"))
-        if not m.get("camera", {}).get("right_axis") or not m["camera"].get("hfov_deg"):
+        if not m.get("terrain_grid"):
             continue
         cam = Camera(m, args.square_pixels)
         terr = Terrain(m)
-        if not terr.ok:
-            continue
-        n_flat += terr.grid is None
         for c in m.get("projection_check_px") or []:
             proj_chk.append(math.hypot(*c))
         name = mp.stem
@@ -362,7 +325,7 @@ def main():
                     "true_x", "true_y", "true_z", "error_m", "along_m", "across_m", "inside_building"])
         w.writerows(rows)
 
-    summary = {"pictures": len(metas), "anchor": args.anchor, "flat_plane_fallback": n_flat,
+    summary = {"pictures": len(metas), "anchor": args.anchor,
                "step1_left_out_not_on_terrain": n_off_terrain,
                "pinhole_vs_engine_worldToScreen_px": stats(proj_chk),
                "python_projection_vs_logged_ground_px": stats(model_vs_game), "steps": {}}
@@ -401,8 +364,6 @@ def main():
         print(f"python projection vs ground_px logged by the game: median {s['median_CEP50_m']} px, max {s['max_m']} px")
     for t, v in summary["label_box_bottom_minus_ground_point_px"].items():
         print(f"label box bottom-centre minus true ground point, {t}: median dx {v['median_dx']} px, dy {v['median_dy']} px")
-    if n_flat:
-        print(f"\nNOTE: {n_flat} picture(s) have no terrain grid: the ground was taken as a flat plane at the laser hit's height.")
     if n_off_terrain:
         print(f"NOTE: step 1 left out {n_off_terrain} object(s) standing off the terrain (floors, roofs, bridges).")
     print(f"\n{out / 'per_object.csv'}\n{out / 'summary.json'}")

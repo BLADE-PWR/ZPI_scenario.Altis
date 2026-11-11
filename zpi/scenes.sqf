@@ -1,5 +1,5 @@
 // =====================================================================
-//  ZPI scene pack - the scenes (keys 1-9, 0)
+//  ZPI scene pack
 //  Every builder takes [centerATL] and only uses the seeded RNG, so a
 //  given seed + location always produces the same static layout.
 // =====================================================================
