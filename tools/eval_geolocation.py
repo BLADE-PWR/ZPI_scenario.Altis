@@ -188,7 +188,7 @@ def main():
     ap.add_argument("--conf", type=float, default=0.25, help="minimum detection confidence (default 0.25)")
     ap.add_argument("--square-pixels", action="store_true", help="derive vfov from hfov and the image aspect ratio")
     ap.add_argument("--on-terrain-tol", type=float, default=0.3,
-                    help="step 1 only uses objects whose ground point is within this many m of the DEM (default 0.3)")
+                    help="step 1 only uses objects whose ground point is within this many m of the DEM (default %(default)s)")
     ap.add_argument("--anchor", choices=["bottom", "center", "keypoint"], default="bottom",
                     help="pixel used for steps 2 and 3: box bottom-centre on the ground (default), box centre "
                          "intersected at half the object height above the ground (better for vehicles seen at an angle), "

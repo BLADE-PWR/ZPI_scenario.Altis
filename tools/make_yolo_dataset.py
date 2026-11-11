@@ -8,16 +8,12 @@ Output (Ultralytics layout):
       data.yaml                                class names of the chosen --classes scheme
       images/{train,val,test}/<name>.png
       labels/{train,val,test}/<name>.txt      one "class cx cy w h" line per object
-      meta/<name>.json                         everything about that screenshot (see README)
+      meta/<name>.json                         everything about that screenshot
       previews/<name>.jpg                      the image with boxes drawn, for checking
       manifest.csv                             one row per image
       scheme.txt                               which class scheme this dataset uses
 
-Class schemes (--classes), chosen when the dataset is built, no need to retake shots:
-    stance       soldier_standing, soldier_kneeling, soldier_prone, tank, military_vehicle, explosion, tank_fire, building  (default)
-    simple       soldier, tank, military_vehicle, explosion, tank_fire, building
-    size         soldier_small, soldier_large, tank, military_vehicle, explosion, tank_fire, building
-    stance_size  soldier_<stance>_<small|large> (6 classes), tank, military_vehicle, explosion, tank_fire, building
+Class schemes (--classes, see SCHEMES below), chosen when the dataset is built, no need to retake shots.
   small = box area under 32x32 px in the image (COCO definition), large = everything bigger.
 
 Explosion boxes: when the game took a reference picture just before the impact (same view),
@@ -37,8 +33,8 @@ Usage (from the mission folder; output goes to <mission>\\output\\<--out>):
     python tools/make_yolo_dataset.py --latest --max-buildings 3 --min-green 0.05   # newest session, clean + green only
     python tools/make_yolo_dataset.py --out dataset_pose --pose   # + ground-point keypoint (YOLO-pose)
 
-Filters (pictures that are left out): more than --max-buildings labelled buildings (default 3),
-less green than --min-green (share of green pixels, default off). manifest.csv lists burst,
+Filters (pictures that are left out): more than --max-buildings labelled buildings,
+less green than --min-green (share of green pixels). manifest.csv lists burst,
 green_fraction and ground_surface per picture, so thresholds can be chosen from real numbers.
 """
 from __future__ import annotations
@@ -461,7 +457,7 @@ def build_meta(rec: dict, name: str, split: str, W: int, H: int, classes: list[s
         "objects": objs,
         "building_occupancy": rec["occupancy"],
         "explosion_reference_image": ref_rel,
-        # pictures of one burst were taken from the same camera position, 2 s apart
+        # pictures of one burst were taken from the same camera position, ZPI_cfg_burstInterval apart
         "burst": ({"id": rec["burst"], "index": rec["burst_idx"] + 1, "length": rec["burst_len"]} if rec["burst"] >= 0 else None),
         "ground_surface": rec["surface"] or None,
         "green_fraction": rec.get("_green"),
@@ -711,9 +707,9 @@ def main():
                     help="YOLO-pose labels: every box also gets one keypoint, the ground point (feet / under the hull / "
                          "impact point); train with a -pose model so the detector predicts the ground point directly")
     ap.add_argument("--max-buildings", type=int, default=3,
-                    help="leave out pictures with more labelled buildings than this (default 3, -1 = keep all)")
+                    help="leave out pictures with more labelled buildings than this (default %(default)s, -1 = keep all)")
     ap.add_argument("--min-green", type=float, default=0.0,
-                    help="leave out pictures with less green than this share, 0..1 (default 0 = keep all; "
+                    help="leave out pictures with less green than this share, 0..1 (default %(default)s = keep all; "
                          "see green_fraction in manifest.csv)")
     args = ap.parse_args()
 

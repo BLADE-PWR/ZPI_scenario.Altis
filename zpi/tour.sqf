@@ -161,7 +161,7 @@ ZPI_fnc_tourExplosion = {
         [_pos, _projectile getVariable ["ZPI_expSize", ZPI_cfg_expMedium], _projectile getVariable ["ZPI_id", -1]] call ZPI_fnc_addExplosion;
     }];
     _sh setVelocity [0, 0, -150];
-    // the explosion triggers the first picture by itself (0.35 s after it); more pictures of the same
+    // the explosion triggers the first picture by itself (ZPI_cfg_expCaptureDelay after it); more pictures of the same
     // explosion (ZPI_cfg_tourExplosionFrames) from the unchanged view, with the same reference picture
     private _t0 = time;
     waitUntil {
@@ -323,7 +323,7 @@ ZPI_fnc_tourScene = {
             };
         };
         // ---- walking soldiers: a group walking through a fixed view
-        //      Two of three bursts from a flatter angle (ZPI_cfg_tourElevPatrol, ~30-45 deg), more from the side.
+        //      Two of three bursts from a flatter angle (ZPI_cfg_tourElevPatrol), more from the side.
         case (_scene in [5, 12, 20, 21]): {
             sleep 5;
             while { call _more } do {

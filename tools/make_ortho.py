@@ -9,7 +9,7 @@ Every tile was taken straight down with north at the top, so a tile pixel (u, v)
 with footprint = 2 * (camera height above ground) * tan(FOV / 2). Only the central part of
 each tile (one grid step) is used, which keeps perspective distortion small.
 
-Output (in --out, default "ortho"):
+Output (in --out):
     ortho_<tag>.png            the map
     ortho_<tag>.pgw            world file: opens at the right place in QGIS / ArcGIS (Arma metres)
     ortho_<tag>_objects.png    the map with soldiers / vehicles, grid, scale bar, legend

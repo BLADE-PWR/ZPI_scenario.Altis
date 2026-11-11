@@ -3,12 +3,12 @@
 //  Everything a team member is likely to tweak lives in this file.
 // =====================================================================
 
-// ---- scene generation ------------------------------------------------
+// ---- scene generation -----------------------------------------------
 ZPI_cfg_faction      = "CSAT";   // target faction: "CSAT" | "NATO" | "AAF"
 ZPI_cfg_seed         = 1;        // base seed; same seed + same location = same layout (N key = seed+1)
 ZPI_cfg_startScene   = 6;        // scene launched at mission start (-1 = none)
 
-// ---- camera ------------------------------------
+// ---- camera ---------------------------------------------------------
 ZPI_cfg_mouseSens     = 15;      // mouse sensitivity (higher = faster)
 ZPI_cfg_keyLookRate   = 60;      // deg/s for arrow-key look at 60 deg FOV
 ZPI_cfg_MinSpeed      = 10;      // m/s; speed grows with height above ground ...
@@ -18,7 +18,7 @@ ZPI_cfg_Smoothing     = 6;       // higher = snappier, lower = smoother movement
 ZPI_cfg_zoomStep     = 0.9;      // FOV multiplier per mouse-wheel step
 ZPI_cfg_startFov     = 30;       // deg, horizontal FOV at mission start
 
-// ---- dataset capture (P = shot, Shift+P = auto) -------------------------------------
+// ---- dataset capture ------------------------------------------------
 ZPI_cfg_viewDist      = 500;     // m: when a scene is out of view, the camera jumps this far from it ...
 ZPI_cfg_viewHeight    = 250;     // ... and this high above it, looking at the scene
 ZPI_cfg_minBoxPx      = 4;       // smaller boxes are dropped (px, on screen resolution)
@@ -40,7 +40,7 @@ ZPI_cfg_vehShots       = 2;      // rounds per vehicle per volley
 ZPI_cfg_fireInterval   = 4;      // s between volleys while the firefight (K) is on
 ZPI_cfg_fireRange      = [250, 500];  // m: vehicles aim at clear ground this far away, so impacts are in the picture
 ZPI_cfg_turretTurnTime = 2.5;    // s to let the turret turn before the first shot
-// automatic screenshot when an explosion happens on screen (I toggles)
+// automatic screenshot when an explosion happens on screen
 ZPI_cfg_captureOnExplosion = true;
 ZPI_cfg_expCaptureDelay    = 0.35;   // s after detonation: fireball + start of the dust cloud
 ZPI_cfg_eventCaptureGap    = 0.8;    // s minimum between automatic event shots
@@ -50,30 +50,29 @@ ZPI_cfg_fireSize           = [2.5, 4];   // m, blast radius: autocannon / tank c
 ZPI_cfg_fireDuration       = 1.5;    // s the firing label stays (flash, then smoke)
 ZPI_cfg_captureOnFiring    = true;   // automatic picture right after a shot
 ZPI_cfg_fireCaptureDelay   = 0.05;   // s after the shot (flash + first smoke)
-ZPI_cfg_tourFireGSD        = [0.009, 0.0115];  // generator zoom on a firing tank: the soldier scale (tank + blast still fit)
-ZPI_cfg_tourFiringPerScene = 2;      // generator: firing pictures per static scene with tanks (tank platoon, parked column, ...)
+ZPI_cfg_tourFireGSD        = [0.009, 0.0115];  // generator zoom on a firing tank (tank + blast must fit)
+ZPI_cfg_tourFiringPerScene = 2;      // generator: firing pictures per static scene with tanks
 // Explosion boxes are measured from the image: just before a shell lands the camera is held
 // still and a reference picture is taken; make_yolo_dataset.py boxes what changed.
 ZPI_cfg_explosionRefShots  = true;
 ZPI_cfg_refTimeout         = 5;      // s the camera is held still waiting for the explosion
 
-// ---- orthophoto (Z): nadir tile flight over the scene, stitched by tools/make_ortho.py --
+// ---- orthophoto -----------------------------------------------------
 ZPI_cfg_orthoSize    = 800;      // m, side of the square area around the scene center
 ZPI_cfg_orthoAlt     = 700;      // m above ground at each tile
-ZPI_cfg_orthoFov     = 30;       // deg horizontal -> ~375 m wide tiles, ~0.2 m/px at 1920 px
+ZPI_cfg_orthoFov     = 30;       // deg, horizontal
 ZPI_cfg_orthoOverlap = 0.2;      // fraction of tile overlap
 ZPI_cfg_orthoSettle  = 1.2;      // s to wait at each tile (terrain and objects load in)
 
-// ---- dataset generator (Home key) ---------------------------------------------------------
+// ---- dataset generator (Home key) -----------------------------------
 ZPI_cfg_tourTarget    = 1018;    // images to generate in one run (only used when ZPI_cfg_tourPlan is [])
-ZPI_cfg_tourTime      = 1;       // index into the time presets: 1 = noon
-ZPI_cfg_tourWeather   = 0;       // index into the weather presets: 0 = clear
-// scenes per location visit (keys: 1-9, 10 = -, 11 = [, 12 = ], 13-22 = Shift+1 ... Shift+0, 23 = Shift+-).
-// A key listed twice is visited twice per round (new site, new layout): more tank columns (11, 17, 19),
-// patrols (5, 20, 21), lone-building entries (22) and kneeling / prone groups (23).
+ZPI_cfg_tourTime      = 1;       // index into ZPI_timePresets (env.sqf)
+ZPI_cfg_tourWeather   = 0;       // index into ZPI_weatherPresets (env.sqf)
+// scenes per location visit, by index in ZPI_scenes (scenes.sqf). A scene listed twice is visited
+// twice per round (new site, new layout).
 ZPI_cfg_tourScenes    = [6, 1, 2, 3, 7, 8, 9, 5, 4, 10, 11, 12, 13, 14, 15, 16, 17, 18,
                          19, 20, 21, 22, 23,  11, 17, 19, 5, 20, 21, 22, 23];
-// images per scene visit (scene key -> count); others: 10. Building entries get the most.
+// pictures per scene visit (scene -> count); scenes not listed get a default count (tour.sqf)
 ZPI_cfg_tourShots     = createHashMapFromArray [[6, 10], [1, 10], [2, 10], [3, 10], [7, 10], [8, 10], [9, 6],
                                                 [5, 15], [4, 15], [10, 20], [11, 20], [12, 15],
                                                 [13, 15], [14, 15], [15, 15], [16, 15], [17, 20], [18, 15],
@@ -82,9 +81,9 @@ ZPI_cfg_tourExplosions = 1;      // explosion close-ups per scene visit
 // ONE scale for every generator picture that can contain soldiers (close-ups, groups, building
 // scenes, static vehicle scenes, tank firing, explosion close-ups): a soldier always has about
 // the same pixel size, so the detector does not have to learn many sizes of the same class.
-ZPI_cfg_tourSoldierGSD = [0.009, 0.0115]; // m/px (picture 17-22 m wide; soldier ~90-170 px)
-ZPI_cfg_tourExplosionGSD = [0.03, 0.045];  // explosion pictures: zoomed out (58-86 m wide), the smoke column is a
-                                           // part of the picture, not all of it, so the measured box fits the smoke
+ZPI_cfg_tourSoldierGSD = [0.009, 0.0115]; // m/px
+ZPI_cfg_tourExplosionGSD = [0.03, 0.045];  // explosion pictures: zoomed out, the smoke column is a part of the picture,
+                                           // not all of it, so the measured box fits the smoke
 ZPI_cfg_tourGroupRadius = 8;             // m: soldiers within this distance are aimed at together
 // driving columns only (no soldiers in view):
 ZPI_cfg_tourVehicleGSD = [0.025, 0.05];  // m/px for one vehicle of a driving column
@@ -99,20 +98,20 @@ ZPI_cfg_tourElevSoldier = [35, 60];      // soldier shots: lower, so more of the
 ZPI_cfg_tourElevPatrol = [30, 45];       // walking patrols and kneeling / prone groups: flatter, more from the side
 ZPI_cfg_tourElevColumn = [30, 60];       // driving columns: from the side as well as from above
 
-// soldiers from far away (the "far" stage below): ~20-60 px. A soldier's longest box side is
+// soldiers from far away (the "far" stage below). A soldier's longest box side is
 // about K / GSD px with K ~0.95 m kneeling, 1.2-1.7 m standing, 1.6-2.1 m prone.
-ZPI_cfg_tourFarGSD     = [0.025, 0.06];   // picture 48-115 m wide
+ZPI_cfg_tourFarGSD     = [0.025, 0.06];
 ZPI_cfg_tourFiringExtra = 1;             // pictures after each tank shot (smoke); the shot itself is always taken
-ZPI_cfg_tourExplosionFrames = 1;         // pictures per explosion: 1 = at 0.35 s; 2 = also at ~1.3 s (same reference)
-ZPI_cfg_downKinds      = ["prone_line", "kneel_line", "circle", "wedge", "cluster"];   // groups-down layouts (Shift+-)
+ZPI_cfg_tourExplosionFrames = 1;         // pictures per explosion (all with the same reference picture)
+ZPI_cfg_downKinds      = ["prone_line", "kneel_line", "circle", "wedge", "cluster"];   // groups_down layouts
 
-// ---- generator plan: stages run one after another with one Home press -------------------------
+// ---- generator plan: stages run one after another -------------------
 // Each stage = [profile, pictures]. A profile changes some ZPI_cfg_* settings for that stage only
 // (scenes, zoom, camera distance, ...); everything not listed keeps its normal value.
 // Empty plan ([]) = the normal generator: ZPI_cfg_tourScenes, ZPI_cfg_tourTarget pictures.
 // To continue a plan after a stop, remove the finished stages / lower the numbers.
 ZPI_cfg_tourPlan = [
-    ["far",        700],   // soldiers from far away (20-60 px), every pose, higher camera
+    ["far",        700],   // soldiers from far away, every pose, higher camera
     ["tank_fire",  200],   // tanks firing (tank_fire)
     ["prone",      200],   // soldiers lying (soldier_prone)
     ["vehicles",   200],   // wheeled vehicles (military_vehicle)
@@ -127,7 +126,7 @@ ZPI_tourProfiles = createHashMapFromArray [
                                                       [1, 12], [8, 10], [6, 10], [22, 15]]],
         ["ZPI_cfg_tourSoldierGSD", ZPI_cfg_tourFarGSD],
         ["ZPI_cfg_tourVehicleGSD", ZPI_cfg_tourFarGSD],
-        ["ZPI_cfg_tourDist", [300, 700]],            // higher camera: 200-650 m above the ground
+        ["ZPI_cfg_tourDist", [300, 700]],            // farther, so higher camera
         ["ZPI_cfg_tourElevSoldier", [40, 70]],
         ["ZPI_cfg_tourElevPatrol", [35, 60]],
         ["ZPI_cfg_tourGroupRadius", 25],             // a wider picture holds more soldiers
@@ -154,7 +153,7 @@ ZPI_tourProfiles = createHashMapFromArray [
         ["ZPI_cfg_tourFiringPerScene", 0]
     ]],
     ["explosions", createHashMapFromArray [
-        // a few normal pictures per scene, then shells: 2 pictures per explosion
+        // a few normal pictures per scene, then shells
         ["ZPI_cfg_tourScenes", [6, 2, 23, 20, 25, 27, 3]],
         ["ZPI_cfg_tourShots", createHashMapFromArray [[6, 3], [2, 3], [23, 3], [20, 3], [25, 3], [27, 3], [3, 3]]],
         ["ZPI_cfg_tourExplosions", 6],
@@ -171,7 +170,7 @@ ZPI_tourProfiles = createHashMapFromArray [
     ]]
 ];
 
-// ---- bursts: the camera stays put and shoots every N seconds ------------------------------
+// ---- bursts: the camera stays put and shoots every N seconds --------
 // Movement shows up between the pictures of one burst; then the camera moves on.
 // Burst pictures are named <scene>_b<burst>_<n>_<frame>.png and the JSON has "burst".
 ZPI_cfg_burstInterval  = 2;      // s between pictures of one burst
@@ -179,7 +178,7 @@ ZPI_cfg_burstShots     = 5;      // pictures per burst (moving scenes)
 ZPI_cfg_burstShotsStatic = 3;    // pictures per burst (static layouts: only a few soldiers walk)
 ZPI_cfg_tourAnimate    = 0.4;    // static layouts: share of soldiers that walk around (0 = none)
 
-// ---- clean, green pictures ---------------------------------------------------------------
+// ---- clean, green pictures ------------------------------------------
 // At most this many buildings may be in a generator picture; the camera tries other angles
 // (ZPI_cfg_viewTries) and skips the view when it cannot get below the limit.
 ZPI_cfg_maxBuildings   = 3;
@@ -197,29 +196,29 @@ ZPI_cfg_surfaceGreen   = [
     ["forest", 0.6], ["field", 0.5], ["grass", 0.5], ["thorn", 0.3]
 ];
 
-// ---- building scenes (-, Shift+1 ... Shift+4) ----------------------------------------------
-ZPI_cfg_buildingSquad   = 8;     // soldiers in the squad (- key); every building scene has at most 8
+// ---- building scenes ------------------------------------------------
+ZPI_cfg_buildingSquad   = 8;     // soldiers in the squad
 ZPI_cfg_buildingEnter   = 4;     // how many of them go inside
 ZPI_cfg_entryStagger    = [1.2, 2.5];   // s between soldiers going through the door
-// lone-building entries (Shift+0): no other labelled building within this radius, and pictures
-// with more than ZPI_cfg_loneMaxBuildings buildings in view are not taken (1 = only that house)
+// lone-building entries: no other labelled building within this radius, and pictures
+// with more than ZPI_cfg_loneMaxBuildings buildings in view are not taken
 ZPI_cfg_loneRadius      = 120;   // m
 ZPI_cfg_loneMaxBuildings = 1;
 
-// ---- driving columns -------------------------------------------------------------------------
+// ---- driving columns ------------------------------------------------
 ZPI_cfg_convoySpeed     = 20;    // km/h, slow enough that a burst shows the column moving
 
-// ---- logging -------------------------------------------------------------
+// ---- logging --------------------------------------------------------
 ZPI_cfg_telemetryEvery = 1;      // telemetry every N frames (0 = off)
 ZPI_cfg_gtEvery        = 10;     // ground-truth positions every N frames (0 = off)
 ZPI_cfg_gtMaxPerLine   = 12;     // objects per log line (keeps RPT lines short)
 
-// ---- telemetry extension ------------------------------------------------------
+// ---- telemetry extension --------------------------------------------
 ZPI_cfg_udp       = true;                // use the extension when it is loaded
 ZPI_cfg_extension = "zpi_telemetry";     // loads zpi_telemetry_x64.dll from the game folder
 ZPI_cfg_udpTarget = "127.0.0.1:5005";    // where the extension sends the records
 
-// ---- factions (base game only; missing classes are dropped at start) --------
+// ---- factions -------------------------------------------------------
 ZPI_factions = createHashMapFromArray [
     ["CSAT", createHashMapFromArray [
         ["side", east],
@@ -251,7 +250,7 @@ ZPI_negatives = createHashMapFromArray [
     ["wrecks",  ["Land_Wreck_T72_hull_F","Land_Wreck_BMP2_F","Land_Wreck_BRDM2_F","Land_Wreck_Truck_F","Land_Wreck_Car2_F","Land_Wreck_HMMWV_F"]]
 ];
 
-// Clutter for the background pictures (Shift+', "negatives" stage): [kind, classes]; missing classes are skipped.
+// Clutter for the background pictures (clutter scene): [kind, classes]; missing classes are skipped.
 ZPI_clutterProps = [
     ["log",    ["Land_WoodenLog_F", "Land_TimberPile_01_F", "Land_WoodPile_F", "Land_WoodPile_large_F", "Land_Timbers_F"]],
     ["rock",   ["Land_BluntStone_01", "Land_BluntStone_02", "Land_SharpStone_01", "Land_SharpStone_02", "Land_W_sharpStone_01",
