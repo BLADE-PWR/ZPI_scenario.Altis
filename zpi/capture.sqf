@@ -70,7 +70,9 @@ ZPI_fnc_corners = {             // 8 corners of a model-space box -> world ASL
         private _cx = _x;
         {
             private _cy = _x;
-            { _out pushBack (_obj modelToWorldVisualWorld [_cx, _cy, _x]) } forEach [_mn select 2, _mx select 2];
+            {
+                _out pushBack (_obj modelToWorldVisualWorld [_cx, _cy, _x]);
+            } forEach [_mn select 2, _mx select 2];
         } forEach [_mn select 1, _mx select 1];
     } forEach [_mn select 0, _mx select 0];
     _out
@@ -194,55 +196,14 @@ ZPI_fnc_soldierBox2D = {
     [[_x0, _y0, _x1, _y1], _meth]
 };
 
-// Model box (vehicles, buildings): the box Arma reports for the whole model is often much larger than the
-// model (it includes invisible helper parts). Take the box of several model LODs
-// and keep their intersection: every one of them contains the hull, so the overlap
-// is the tightest box that still contains it. Cached per model type.
-ZPI_modelBoxCache = createHashMap;
+// Model box (vehicles, buildings): the Geometry LOD's box, which is tight around the hull.
+// The whole-model box includes invisible helper parts, so it is only the fallback
+// for models without a Geometry LOD.
 ZPI_fnc_modelBox = {
     params ["_v"];
-    private _key = typeOf _v;
-    if (_key == "") then { _key = (getModelInfo _v) select 1 };
-    private _hit = ZPI_modelBoxCache getOrDefault [_key, []];
-    if (_hit isNotEqualTo []) exitWith { _hit };
-    private _cands = [];
-    { _cands pushBack [_x select 0, _x call (_x select 1)] } forEach [
-        ["visual",   { 0 boundingBoxReal _v }],
-        ["geometry", { 2 boundingBoxReal _v }],
-        ["general",  { boundingBoxReal _v }],
-        ["fire",     { boundingBoxReal [_v, "FireGeometry"] }],
-        ["view",     { boundingBoxReal [_v, "ViewGeometry"] }],
-        ["geomlod",  { boundingBoxReal [_v, "Geometry"] }]
-    ];
-    private _mn = [-1e9, -1e9, -1e9];
-    private _mx = [1e9, 1e9, 1e9];
-    private _used = [];
-    {
-        _x params ["_name", "_bb"];
-        if (_bb isEqualType [] && {count _bb >= 2}) then {
-            private _e = (_bb select 1) vectorDiff (_bb select 0);
-            if ((_e select 0) > 0.5 && {(_e select 1) > 0.5} && {(_e select 2) > 0.3}) then {
-                for "_i" from 0 to 2 do {
-                    _mn set [_i, (_mn select _i) max ((_bb select 0) select _i)];
-                    _mx set [_i, (_mx select _i) min ((_bb select 1) select _i)];
-                };
-                _used pushBack _name;
-            };
-        };
-    } forEach _cands;
-    if (_used isEqualTo [] || {(_mx select 0) <= (_mn select 0)} || {(_mx select 1) <= (_mn select 1)} || {(_mx select 2) <= (_mn select 2)}) then {
-        private _bb = boundingBoxReal _v;
-        _mn = _bb select 0;
-        _mx = _bb select 1;
-        _used = ["fallback"];
-    };
-    // one log line per model type, so the boxes can be checked
-    ["vbox", format ['{"class":"%1","used":%2,"result":[%3,%4],"candidates":[%5]}', _key, str _used,
-        [_mn, 2] call ZPI_fnc_v3, [_mx, 2] call ZPI_fnc_v3,
-        (_cands apply { format ['["%1",%2]', _x select 0, ["[]", format ["[%1,%2]", [((_x select 1) select 0), 2] call ZPI_fnc_v3,
-        [((_x select 1) select 1), 2] call ZPI_fnc_v3]] select ((_x select 1) isEqualType [] && {count (_x select 1) >= 2})] }) joinString ","]] call ZPI_fnc_emit;
-    ZPI_modelBoxCache set [_key, [_mn, _mx]];
-    [_mn, _mx]
+    private _bb = boundingBoxReal [_v, "Geometry"];
+    if (count _bb < 2 || {((_bb select 1) vectorDiff (_bb select 0)) findIf { _x <= 0 } >= 0}) then { _bb = boundingBoxReal _v };
+    [_bb select 0, _bb select 1]
 };
 
 // Fraction of sample points visible from the camera (terrain, buildings, trees, nets).
@@ -281,9 +242,9 @@ ZPI_fnc_buildingOf = {          // [unit] -> building he is inside, or objNull
 };
 
 // Clip, filter and format one box. Returns "" when the box is rejected.
-// _extra = [stance, posASL, dist, inside, grid]
+// _g = ground point ASL (feet / terrain under the hull or building / impact point); _meth, _old: soldiers only
 ZPI_fnc_finishBox = {
-    params ["_kind", "_box", "_id", "_vis", "_W", "_H", "_extra"];
+    params ["_kind", "_box", "_id", "_vis", "_W", "_H", "_stance", "_inside", "_g", "_basis", "_th", "_tv", ["_meth", ""], ["_old", []]];
     if (_box isEqualTo []) exitWith { "" };
     _box params ["_x0", "_y0", "_x1", "_y1"];
     private _area = (_x1 - _x0) * (_y1 - _y0);
@@ -297,15 +258,13 @@ ZPI_fnc_finishBox = {
     if (_inFrac < ZPI_cfg_minInFrame) exitWith { "" };               // mostly outside the image
     if (((_cx1 - _cx0) * _W) < ZPI_cfg_minBoxPx || {((_cy1 - _cy0) * _H) < ZPI_cfg_minBoxPx}) exitWith { "" };
     if (_vis < ZPI_cfg_minVisible) exitWith { "" };
-    _extra params ["_stance", "_p", "_dist", "_inside", "_grid", ["_g", []], ["_gn", []], ["_meth", ""], ["_old", []]];
-    if (_g isEqualTo []) then { _g = _p };
-    // fields 16-20: ground point (where the object stands, ASL) and its normalized image position
-    // field 21: soldier box method ("v" body bones, "h" hit-point parts, "" one 3D box)
-    // field 22: soldiers: the old one-3D-box label [cx, cy, w, h] (to correct pictures taken before)
-    format ['["%1",%2,%3,%4,%5,%6,%7,%8,"%9",%10,%11,%12,%13,%14,"%15",%16,%17,%18,%19,%20,"%21",%22]', _kind,
-        ((_cx0 + _cx1) / 2) toFixed 5, ((_cy0 + _cy1) / 2) toFixed 5, (_cx1 - _cx0) toFixed 5, (_cy1 - _cy0) toFixed 5,
-        _id, _vis toFixed 2, (1 - _inFrac) toFixed 2, _stance,
-        (_p select 0) toFixed 2, (_p select 1) toFixed 2, (_p select 2) toFixed 2, _dist toFixed 1, [0, 1] select _inside, _grid,
+    private _gn = [_g, _basis, _th, _tv] call ZPI_fnc_projectN;
+    // fields 13-15: ground point ASL; 16-17: its normalized image position (null when behind the camera)
+    // field 18: soldier box method ("v" body bones, "h" hit-point parts, "" one 3D box)
+    // field 19: soldiers: the one-3D-box label [cx, cy, w, h] (calibrates soldiers whose bone box failed)
+    format ['["%1",%2,%3,%4,%5,%6,%7,%8,"%9",%10,%11,"%12",%13,%14,%15,%16,%17,"%18",%19]',
+        _kind, ((_cx0 + _cx1) / 2) toFixed 5, ((_cy0 + _cy1) / 2) toFixed 5, (_cx1 - _cx0) toFixed 5, (_cy1 - _cy0) toFixed 5,
+        _id, _vis toFixed 2, (1 - _inFrac) toFixed 2, _stance, ((_basis select 0) vectorDistance _g) toFixed 1, [0, 1] select _inside, mapGridPosition _g,
         (_g select 0) toFixed 2, (_g select 1) toFixed 2, (_g select 2) toFixed 2,
         ["null", (_gn select 0) toFixed 6] select (_gn isNotEqualTo []), ["null", (_gn select 1) toFixed 6] select (_gn isNotEqualTo []),
         _meth, if (count _old == 4) then {
@@ -357,8 +316,7 @@ ZPI_fnc_computeLabels = {
                     private _bc = _obj modelToWorldVisualWorld [_c select 0, _c select 1, _mn select 2];
                     [_bc select 0, _bc select 1, getTerrainHeightASL _bc]
                 };
-                private _gn = [_g, _basis, _th, _tv] call ZPI_fnc_projectN;
-                private _s = [_kind, _box, _id, _vis, _W, _H, [_st, _p, _cam vectorDistance _p, _inside, mapGridPosition _obj, _g, _gn, _meth, _old]] call ZPI_fnc_finishBox;
+                private _s = [_kind, _box, _id, _vis, _W, _H, _st, _inside, _g, _basis, _th, _tv, _meth, _old] call ZPI_fnc_finishBox;
                 if (_s != "") then { _boxes pushBack _s };
             };
         };
@@ -378,8 +336,7 @@ ZPI_fnc_computeLabels = {
             private _h = _Hh * ((_t / 0.8) min 1) max (_r * 1.2);
             private _box = [[_p, _r, -0.5, _h] call ZPI_fnc_worldBoxCorners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
             private _vis = [_cam, [_p vectorAdd [0, 0, _h / 2], _p vectorAdd [0, 0, _h]], objNull, "GEOM"] call ZPI_fnc_visibility;
-            private _s = ["e", _box, -1, _vis, _W, _H, ["", _p, _cam vectorDistance _p, false, mapGridPosition [_p select 0, _p select 1], _p,
-                [_p, _basis, _th, _tv] call ZPI_fnc_projectN]] call ZPI_fnc_finishBox;
+            private _s = ["e", _box, -1, _vis, _W, _H, "", false, _p, _basis, _th, _tv] call ZPI_fnc_finishBox;
             if (_s != "") then { _boxes pushBack _s };
         };
     } forEach ZPI_explosions;
@@ -394,8 +351,7 @@ ZPI_fnc_computeLabels = {
             private _c = _p vectorAdd (_dir vectorMultiply (_r * 0.7));
             private _box = [[_c, _r, -_r * 0.6, _r * 0.9] call ZPI_fnc_worldBoxCorners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
             private _vis = [_cam, [_p, _c], objNull, "GEOM"] call ZPI_fnc_visibility;
-            private _s = ["f", _box, _vid, _vis max 0.5, _W, _H, ["", _p, _cam vectorDistance _p, false, mapGridPosition [_p select 0, _p select 1], _p,
-                [_p, _basis, _th, _tv] call ZPI_fnc_projectN]] call ZPI_fnc_finishBox;
+            private _s = ["f", _box, _vid, _vis max 0.5, _W, _H, "", false, _p, _basis, _th, _tv] call ZPI_fnc_finishBox;
             if (_s != "") then { _boxes pushBack _s };
         };
     } forEach ZPI_firings;
@@ -436,23 +392,27 @@ ZPI_fnc_buildingLabels = {
         private _b = _x;
         if ([_b] call ZPI_fnc_isLabelBuilding) then {
             ([_b] call ZPI_fnc_modelBox) params ["_mn", "_mx"];
-            private _e = _mx vectorDiff _mn;
-            private _box = [[_b, _mn, _mx] call ZPI_fnc_corners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
+
+            private _corners = [_b, _mn, _mx] call ZPI_fnc_corners;
+            {
+                private _p = _corners select _x;
+                _p set [2, (_p select 2) max (getTerrainHeightASL _p)];
+            } forEach [0, 2, 4, 6];
+            private _box = [_corners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
+
             // cheap checks first: inside the picture and big enough
-            if (_box isNotEqualTo [] && {(_box select 2) > 0} && {(_box select 0) < 1} && {(_box select 3) > 0} && {(_box select 1) < 1}
+            if (_box isNotEqualTo []
                 && {(((_box select 2) min 1) - ((_box select 0) max 0)) * _W >= ZPI_cfg_minBoxPx}
                 && {(((_box select 3) min 1) - ((_box select 1) max 0)) * _H >= ZPI_cfg_minBoxPx}) then {
                 private _mid = (_mn vectorAdd _mx) vectorMultiply 0.5;
-                private _q = _e vectorMultiply 0.3;
+                private _q = (_mx vectorDiff _mn) vectorMultiply 0.3;
                 private _pts = [_mid, [_mid select 0, _mid select 1, (_mx select 2) - 0.3]] + ([[1, 1], [1, -1], [-1, 1], [-1, -1]] apply {
                     _mid vectorAdd [(_q select 0) * (_x select 0), (_q select 1) * (_x select 1), (_q select 2)]
                 });
                 private _vis = [_cam, _pts apply { _b modelToWorldVisualWorld _x }, _b] call ZPI_fnc_visibility;
-                private _p = getPosASL _b;
                 private _bc = _b modelToWorldVisualWorld [_mid select 0, _mid select 1, _mn select 2];
                 private _g = [_bc select 0, _bc select 1, getTerrainHeightASL _bc];
-                private _s = ["b", _box, -2, _vis, _W, _H, ["", _p, _cam vectorDistance _p, false, mapGridPosition _b, _g,
-                    [_g, _basis, _th, _tv] call ZPI_fnc_projectN]] call ZPI_fnc_finishBox;
+                private _s = ["b", _box, -2, _vis, _W, _H, "", false, _g, _basis, _th, _tv] call ZPI_fnc_finishBox;
                 if (_s != "") then { _out pushBack _s };
             };
         };

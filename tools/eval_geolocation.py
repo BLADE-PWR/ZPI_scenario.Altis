@@ -98,12 +98,6 @@ class Camera:
 class Terrain:
     """Bilinear DEM from the picture's terrain grid; flat plane when there is none."""
 
-    @classmethod
-    def plane_at(cls, z):
-        t = cls.__new__(cls)
-        t.grid, t.plane = None, z
-        return t
-
     def __init__(self, meta: dict):
         g = meta.get("terrain_grid")
         self.grid = g
@@ -189,16 +183,6 @@ def class_type(name: str) -> str:
     return name
 
 
-def ground_point(o: dict, terr: Terrain):
-    if o.get("ground_pos_asl"):
-        return o["ground_pos_asl"], True
-    p = o.get("world_pos_asl")
-    if not p:
-        return None, False
-    h = terr.height(p[0], p[1]) if terr.ok else p[2]
-    return [p[0], p[1], h], False
-
-
 def box_px(cx, cy, w, h, W, H):
     return (cx - w / 2) * W, (cy - h / 2) * H, (cx + w / 2) * W, (cy + h / 2) * H
 
@@ -262,7 +246,7 @@ def main():
     pix_off = defaultdict(list)        # type -> (dx, dy) box bottom-centre minus ground point, px
     proj_chk = []
     model_vs_game = []
-    n_flat = n_old = n_off_terrain = 0
+    n_flat = n_off_terrain = 0
     det_total = det_matched = gt_total = 0
 
     for mp in metas:
@@ -280,26 +264,17 @@ def main():
         gts = []
         for o in m["objects"]:
             t = o["type"]
-            g, exact = ground_point(o, terr)
-            if g is None:
-                continue
-            n_old += not exact
+            g = o["ground_pos_asl"]
             bx = o["box_px"]
-            # no DEM (older pictures): a plane at this object's true ground height ("oracle" terrain)
-            if terr.grid is None and o.get("world_pos_asl"):
-                g = list(o["world_pos_asl"])
-                ot = Terrain.plane_at(g[2])
-            else:
-                ot = terr
-            gts.append((o, t, g, bx, ot))
+            gts.append((o, t, g, bx))
 
             # step 1: truth -> pixel -> DEM
             pg = cam.project(g)
-            on_terrain = abs(g[2] - ot.height(g[0], g[1])) <= args.on_terrain_tol
+            on_terrain = abs(g[2] - terr.height(g[0], g[1])) <= args.on_terrain_tol
             if pg and o.get("ground_px"):
                 model_vs_game.append(math.hypot(pg[0] - o["ground_px"][0], pg[1] - o["ground_px"][1]))
             if pg and on_terrain:
-                hit = ot.intersect(cam.o, cam.ray(*pg))
+                hit = terr.intersect(cam.o, cam.ray(*pg))
                 if hit:
                     e, al, ac = error_parts(hit, g, cam.heading)
                     err[("1_geometry", t)].append(e); comp[("1_geometry", t)].append((al, ac))
@@ -314,7 +289,7 @@ def main():
             else:
                 bc = ((bx[0] + bx[2]) / 2, bx[3]) if args.anchor == "bottom" else ((bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2)
                 lift = 0.0 if args.anchor == "bottom" else HALF_HEIGHT.get(t, 1.0)
-            hit = ot.intersect(cam.o, cam.ray(*bc), lift=lift)
+            hit = terr.intersect(cam.o, cam.ray(*bc), lift=lift)
             if hit:
                 e, al, ac = error_parts(hit, g, cam.heading)
                 err[("2_labels", t)].append(e); comp[("2_labels", t)].append((al, ac))
@@ -357,7 +332,7 @@ def main():
             used = set()
             for conf, t, db, kp in dets:
                 best, bi = 0, -1
-                for k, (o, gt_t, g, bx, ot) in enumerate(gts):
+                for k, (o, gt_t, g, bx) in enumerate(gts):
                     if k in used or gt_t != t:
                         continue
                     v = iou(db, bx)
@@ -367,13 +342,13 @@ def main():
                     continue
                 used.add(bi)
                 det_matched += 1
-                o, gt_t, g, bx, ot = gts[bi]
+                o, gt_t, g, bx = gts[bi]
                 if kp is not None:
                     bc, lift = kp, 0.0
                 else:
                     bc = ((db[0] + db[2]) / 2, db[3]) if args.anchor == "bottom" else ((db[0] + db[2]) / 2, (db[1] + db[3]) / 2)
                     lift = 0.0 if args.anchor == "bottom" else HALF_HEIGHT.get(t, 1.0)
-                hit = ot.intersect(cam.o, cam.ray(*bc), lift=lift)
+                hit = terr.intersect(cam.o, cam.ray(*bc), lift=lift)
                 if hit:
                     e, al, ac = error_parts(hit, g, cam.heading)
                     err[("3_detector", t)].append(e); comp[("3_detector", t)].append((al, ac))
@@ -387,7 +362,7 @@ def main():
                     "true_x", "true_y", "true_z", "error_m", "along_m", "across_m", "inside_building"])
         w.writerows(rows)
 
-    summary = {"pictures": len(metas), "anchor": args.anchor, "flat_plane_fallback": n_flat, "objects_without_ground_point": n_old,
+    summary = {"pictures": len(metas), "anchor": args.anchor, "flat_plane_fallback": n_flat,
                "step1_left_out_not_on_terrain": n_off_terrain,
                "pinhole_vs_engine_worldToScreen_px": stats(proj_chk),
                "python_projection_vs_logged_ground_px": stats(model_vs_game), "steps": {}}
@@ -427,10 +402,7 @@ def main():
     for t, v in summary["label_box_bottom_minus_ground_point_px"].items():
         print(f"label box bottom-centre minus true ground point, {t}: median dx {v['median_dx']} px, dy {v['median_dy']} px")
     if n_flat:
-        print(f"\nNOTE: {n_flat} picture(s) have no terrain grid (taken before the update): each object was intersected with a\n"
-              f"      flat plane at its own true height (oracle terrain), so these numbers leave out terrain error.")
-    if n_old:
-        print(f"NOTE: {n_old} object(s) have no logged ground point: object position + DEM height used.")
+        print(f"\nNOTE: {n_flat} picture(s) have no terrain grid: the ground was taken as a flat plane at the laser hit's height.")
     if n_off_terrain:
         print(f"NOTE: step 1 left out {n_off_terrain} object(s) standing off the terrain (floors, roofs, bridges).")
     print(f"\n{out / 'per_object.csv'}\n{out / 'summary.json'}")

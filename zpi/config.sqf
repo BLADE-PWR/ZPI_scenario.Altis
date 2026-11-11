@@ -13,7 +13,7 @@ ZPI_cfg_mouseSens     = 15;      // mouse sensitivity (higher = faster)
 ZPI_cfg_keyLookRate   = 60;      // deg/s for arrow-key look at 60 deg FOV
 ZPI_cfg_MinSpeed      = 10;      // m/s; speed grows with height above ground ...
 ZPI_cfg_MaxSpeed      = 200;     // ... up to this
-ZPI_cfg_FastMul       = 4;       // Shift multiplier
+ZPI_cfg_FastMul       = 5;       // Shift multiplier
 ZPI_cfg_Smoothing     = 6;       // higher = snappier, lower = smoother movement
 ZPI_cfg_zoomStep     = 0.9;      // FOV multiplier per mouse-wheel step
 ZPI_cfg_startFov     = 30;       // deg, horizontal FOV at mission start

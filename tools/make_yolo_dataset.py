@@ -67,11 +67,10 @@ SCHEMES = {
                     "soldier_prone_small", "soldier_prone_large", "tank", "military_vehicle", "explosion", "tank_fire", "building"],
 }
 KIND_NAME = {"s": "soldier", "t": "tank", "v": "military_vehicle", "e": "explosion", "f": "tank_fire", "b": "building"}
-OLD_CLASS_KIND = {0: "s", 1: "t", 2: "v", 3: "e"}          # old logs; 4 = shooting, no longer used
 STANCE_NAME = {"STAND": "standing", "CROUCH": "kneeling", "PRONE": "prone"}
 COLORS = [(255, 60, 60), (255, 140, 140), (255, 0, 160), (255, 200, 0), (60, 200, 255), (255, 120, 0),
           (120, 255, 120), (200, 80, 255), (255, 255, 255)]
-LINE_RE = re.compile(r"ZPI\|(label|shot|shotx|evt|gt|dem|ray)\|(.*)$")
+LINE_RE = re.compile(r"ZPI\|(label|shot|shotx|evt|dem|ray)\|(.*)$")
 SPLITS = ("train", "val", "test")
 BROKEN: list[Path] = []          # screenshots that cannot be decoded (half-written by the game)
 
@@ -108,40 +107,20 @@ def find_image(rel: str, shot_dirs: list[Path]) -> Path | None:
 
 
 # ---------------------------------------------------------------- reading the log
-def _box_to_obj(b, gt_last: dict) -> dict | None:
-    """One box from the log -> object dict. Handles the old (numbers) and new (kind letter) format."""
-    if isinstance(b[0], str):            # new: [kind, cx, cy, w, h, id, vis, cut, stance, x, y, z, dist, inside, grid]
-        kind = b[0]
-        o = {"kind": kind, "cx": float(b[1]), "cy": float(b[2]), "w": float(b[3]), "h": float(b[4]),
-             "object_id": int(b[5]), "visible": float(b[6]), "cut_by_edge": float(b[7]),
-             "stance_raw": b[8] if len(b) > 8 else "", "stance_source": "game",
-             "world_pos_asl": [float(b[9]), float(b[10]), float(b[11])] if len(b) > 11 else None,
-             "distance_m": float(b[12]) if len(b) > 12 else None,
-             "inside_building": bool(int(b[13])) if len(b) > 13 else None,
-             "grid": b[14] if len(b) > 14 else None,
-             # ground point (feet / terrain under the hull centre / impact point) and where it is in the image
-             "ground_pos_asl": [float(b[15]), float(b[16]), float(b[17])] if len(b) > 17 else None,
-             "ground_norm": [float(b[18]), float(b[19])] if len(b) > 19 and b[18] is not None and b[19] is not None else None}
-        if kind == "s":
-            # field 21: how the mission made the soldier box; older versions: one projected 3D box (loose)
-            meth = b[20] if len(b) > 20 else ""
-            o["soldier_box"] = {"v": "body_parts", "h": "hit_point_parts"}.get(meth, "3d_box")
-            # field 22: the same soldier's one-3D-box label (pairs for correcting older pictures)
-            if len(b) > 21 and isinstance(b[21], list) and len(b[21]) == 4:
-                o["box_3d"] = [float(v) for v in b[21]]
-        return o
-    kind = OLD_CLASS_KIND.get(int(b[0]))  # old: [cls, cx, cy, w, h, id, vis, cut]
-    if kind is None:
-        return None                       # shooting boxes are dropped
-    o = {"kind": kind, "cx": float(b[1]), "cy": float(b[2]), "w": float(b[3]), "h": float(b[4]),
-         "object_id": int(b[5]) if len(b) > 5 else -1, "visible": float(b[6]) if len(b) > 6 else 1.0,
-         "cut_by_edge": float(b[7]) if len(b) > 7 else 0.0, "stance_raw": "", "stance_source": "",
-         "world_pos_asl": None, "distance_m": None, "inside_building": None, "grid": None}
-    last = gt_last.get(o["object_id"])   # recover stance + position from the ground-truth log
-    if last:
-        o["world_pos_asl"] = last[0]
-        if kind == "s" and last[1]:
-            o["stance_raw"], o["stance_source"] = last[1], "ground_truth_log"
+def _box_to_obj(b) -> dict:
+    """One box from the log -> object dict.
+    [kind, cx, cy, w, h, id, vis, cut, stance, dist, inside, grid, gx, gy, gz, gu, gv, method, box_3d]"""
+    o = {"kind": b[0], "cx": float(b[1]), "cy": float(b[2]), "w": float(b[3]), "h": float(b[4]),
+         "object_id": int(b[5]), "visible": float(b[6]), "cut_by_edge": float(b[7]),
+         "stance_raw": b[8], "stance_source": "game",
+         "distance_m": float(b[9]), "inside_building": bool(int(b[10])), "grid": b[11],
+         # ground point (feet / terrain under the hull or building / impact point) and where it is in the image
+         "ground_pos_asl": [float(b[12]), float(b[13]), float(b[14])],
+         "ground_norm": [float(b[15]), float(b[16])] if b[15] is not None else None}
+    if o["kind"] == "s":
+        o["soldier_box"] = {"v": "body_parts", "h": "hit_point_parts"}.get(b[17], "3d_box")
+        if isinstance(b[18], list) and len(b[18]) == 4:
+            o["box_3d"] = [float(v) for v in b[18]]
     return o
 
 
@@ -151,7 +130,6 @@ def read_labels(rpts: list[Path], diag: Counter | None = None) -> list[dict]:
     done: list[dict] = []
     for rpt in rpts:
         session = "nosession"
-        gt_last: dict[int, tuple] = {}
         shots: dict[str, dict] = {}
         shotx: dict[str, dict] = {}
         parts: dict[str, dict[int, dict]] = defaultdict(dict)
@@ -178,17 +156,12 @@ def read_labels(rpts: list[Path], diag: Counter | None = None) -> list[dict]:
                 if kind == "evt":
                     if rec.get("kind") == "session_start":
                         session = rec.get("data", {}).get("session", session)
-                        gt_last = {}
                     continue
                 if kind == "dem":
                     dems[rec["image"]][rec["part"]] = rec
                     continue
                 if kind == "ray":
                     rays[rec["image"]][rec["part"]] = rec
-                    continue
-                if kind == "gt":
-                    for o in rec.get("objs", []):
-                        gt_last[int(o[0])] = (o[1], o[4] if len(o) > 4 else "")
                     continue
                 key = rec["image"]
                 if kind == "shot":
@@ -201,15 +174,8 @@ def read_labels(rpts: list[Path], diag: Counter | None = None) -> list[dict]:
                 if len(parts[key]) < rec["parts"]:
                     continue
                 p = parts.pop(key)
-                objs = [o for k in sorted(p) for b in p[k]["boxes"] if (o := _box_to_obj(b, gt_last))]
-                if key in shots:                                  # new format
-                    r = {**shots.pop(key), **shotx.pop(key, {})}
-                    r["format"] = 2
-                else:                                             # old format: header in the label line
-                    r = dict(p[0])
-                    r["format"] = 1
-                    r["cam"] = {"pos_asl": r.get("cam_pos_asl"), "z_axis": r.get("cam_dir"),
-                                "hfov": r.get("hfov_deg"), "vfov": r.get("vfov_deg")}
+                objs = [_box_to_obj(b) for k in sorted(p) for b in p[k]["boxes"]]
+                r = {**shots.pop(key), **shotx.pop(key, {})}
                 r["objects"] = objs
                 r["session"] = session
                 d = dems.pop(key, {})
@@ -238,7 +204,7 @@ def stance_of(o: dict, W: int, H: int) -> str:
     st = STANCE_NAME.get((o.get("stance_raw") or "").upper())
     if st:
         return st
-    # unknown (very old logs): guess from the box shape, which only works for oblique views
+    # stance unknown (e.g. "UNDEFINED"): guess from the box shape, which only works for oblique views
     o["stance_source"] = "guessed_from_box"
     ratio = (o["h"] * H) / max(o["w"] * W, 1e-6)
     return "standing" if ratio > 1.6 else "kneeling" if ratio > 0.9 else "prone"
@@ -603,11 +569,10 @@ def build_meta(rec: dict, name: str, split: str, W: int, H: int, classes: list[s
              "object_id": o["object_id"], "box_norm": {k: round(o[k], 6) for k in ("cx", "cy", "w", "h")},
              "box_px": [round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1)],
              "size": size_category(o, W, H), "visible": o["visible"], "cut_by_edge": o["cut_by_edge"],
-             "world_pos_asl": o["world_pos_asl"], "grid": o["grid"], "distance_m": o["distance_m"]}
-        if o.get("ground_pos_asl"):
-            e["ground_pos_asl"] = o["ground_pos_asl"]
-            if o.get("ground_norm"):
-                e["ground_px"] = [round(o["ground_norm"][0] * W, 2), round(o["ground_norm"][1] * H, 2)]
+             "grid": o["grid"], "distance_m": o["distance_m"]}
+        e["ground_pos_asl"] = o["ground_pos_asl"]
+        if o.get("ground_norm"):
+            e["ground_px"] = [round(o["ground_norm"][0] * W, 2), round(o["ground_norm"][1] * H, 2)]
         if o["kind"] == "s":
             e["box_method"] = o.get("soldier_box", "3d_box")
             e["stance"] = stance_of(o, W, H)
@@ -971,17 +936,16 @@ def main():
 
     diag: Counter = Counter()
     records = read_labels(rpts, diag)
-    # soldier boxes of older pictures: learn the correction from the pictures that have both boxes
+    # soldiers whose tight box failed (one 3D box): learn the correction from soldiers that have both boxes
     args.box_calibration = fit_box_calibration(records) if args.box_fix else {}
     n_legacy = sum(1 for r in records for o in r["objects"] if o["kind"] == "s" and o.get("soldier_box") == "3d_box")
     if args.box_calibration:
         (out / "box_calibration.json").write_text(json.dumps(args.box_calibration, indent=1), encoding="utf-8")
-        print("soldier box correction for older pictures learned from "
+        print("soldier box correction (for soldiers without a tight box) learned from "
               + ", ".join(f"{k} {v['pairs']}" for k, v in args.box_calibration.items()) + " pairs (box_calibration.json)")
     elif n_legacy and args.box_fix:
-        print(f"NOTE: {n_legacy} soldier boxes come from older pictures (one 3D box, loose at the bottom). They are corrected\n"
-              f"      once pictures from the new mission are in the logs (needs {CAL_MIN_PAIRS}+ soldiers): take new pictures,\n"
-              f"      then build the dataset into a NEW folder (--out ...) so every picture is labelled again.")
+        print(f"NOTE: {n_legacy} soldier boxes are one 3D box (loose at the bottom, the tight box failed). They are corrected\n"
+              f"      once the logs have {CAL_MIN_PAIRS}+ soldiers with both boxes.")
     sessions_all = list(dict.fromkeys(r["session"] for r in records))
     if args.latest and sessions_all:
         args.session = [sessions_all[-1]]

@@ -167,17 +167,13 @@ ZPI_fnc_zoom = {                  // _z > 0 zoom in, < 0 zoom out
     [ZPI_hfov * (ZPI_cfg_zoomStep ^ _z)] call ZPI_fnc_setFov;
 };
 
-// ---- frame-number bar (image <-> telemetry sync) --------------------------
+// ---- frame-number bar ------------------------------------------------
 // 2 sentinel squares (white, black) + 12 data bits, LSB first, 4x4 px each,
-// in the very corner of the screen. Decoder: tools/frame_code.py
-// 12 bits wrap every 4096 frames (68 s at 60 fps), which is far longer than
-// any image/telemetry pairing window; the telemetry stream carries the frame
+// in the very corner of the screen. Decoder: tools/frame_code.py 12 bits
+// wrap every 4096 frames (68 s at 60 fps); the telemetry stream carries the frame
 // number in full, so the bar only has to say which recent frame this is.
 // Note: the screenshot command does not capture UI, so the bar is only in
-// screen captures (dxcam/OBS), never in screenshots taken with the P key.
-// The bar is not part of the readout: live capture needs it up while quiet
-// mode (U) hides the readout, so the two layers go up and down separately.
-
+// screen captures (e.g. with OBS), never in screenshots taken with the P key.
 ZPI_fnc_hideHud = {
     ("ZPI_hudLayer" call BIS_fnc_rscLayer) cutText ["", "PLAIN"];
 };
@@ -355,11 +351,11 @@ ZPI_fnc_onFrame = {
     [_rdt] call ZPI_fnc_updateScaleLock;
     call ZPI_fnc_captureTick;
     call ZPI_fnc_buildingTick;
-    if (ZPI_quietMode == 0) then {
-        call ZPI_fnc_updateHud;
-    };
     if (ZPI_quietMode < 2) then {
         call ZPI_fnc_updateFrameCode;
+        if (ZPI_quietMode == 0) then {
+            call ZPI_fnc_updateHud;
+        };
     };
     if (ZPI_cfg_telemetryEvery > 0 && {diag_frameNo % ZPI_cfg_telemetryEvery == 0}) then {
         call ZPI_fnc_logTelemetry;

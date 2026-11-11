@@ -60,13 +60,7 @@ ZPI_fnc_pad = {                  // [number, width] -> zero-padded string
     _s
 };
 
-// ---- output ---------------------------------------------------------------
-// Every record is one line:  ZPI|<type>|<json>
-// It always goes to the RPT, which the offline tools read, and additionally to
-// the extension when that is loaded, which is the only path fast enough to
-// pair with a live screen capture.
 ZPI_udp_enabled = false;
-
 ZPI_fnc_initExtension = {
     ZPI_udp_enabled = false;
     if (!ZPI_cfg_udp) exitWith {};

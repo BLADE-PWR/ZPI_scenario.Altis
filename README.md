@@ -220,9 +220,7 @@ Each JSON records `gsd_center_m_per_px`, `scale_lock` and `target_gsd`, so you c
 
 ## Labels and classes
 
-**Vehicle and building boxes.** The box Arma reports for a whole vehicle or building model is padded on every side; for a T-100 it is 6.7 m wide and 4.5 m tall instead of about 3.5 × 2.3 m. The mission therefore takes the boxes of several model LODs (visual, fire, view and geometry) and keeps their overlap, which is the tightest box that still contains the vehicle or building. Each vehicle or building type's boxes are written to the log once as `ZPI|vbox|`.
-
-**Soldier boxes (tight).** Earlier versions labelled a soldier with *one* 3D box around his body, projected into the picture. Seen from above at an angle, the near-bottom corners of that box land below his feet, so the box was loose at the bottom (10–40 % of its height below the feet) and a bit too wide. Now every body part of the visible model (head, upper arms, forearms, hands, thighs, shins, feet, toes, …) has its own small box; their corners are projected and the label is the union, which hugs the silhouette. A helmet (+8 cm) and a backpack (+22 cm behind the back) are added, rifles are not. If the game does not give animated body parts, the hit-point parts are used instead (bigger, still much tighter). Each soldier in the JSON says `"box_method"`: `body_parts`, `hit_point_parts`, `corrected_3d_box` (older picture, corrected, see Building the dataset) or `3d_box` (older picture, uncorrected). `ZPI_cfg_soldierTightBox = false` goes back to the old box.
+**Soldier boxes (tight).** One 3D box around a soldier, projected into the picture, is loose: seen from above at an angle, its near-bottom corners land below his feet (10–40 % of its height). So every body part of the visible model (head, upper arms, forearms, hands, thighs, shins, feet, toes, …) gets its own small box; their corners are projected and the label is the union, which hugs the silhouette. A helmet (+8 cm) and a backpack (+22 cm behind the back) are added, rifles are not. If the game does not give animated body parts, the hit-point parts are used instead (bigger, still much tighter). Each soldier in the JSON says `"box_method"`: `body_parts`, `hit_point_parts`, `corrected_3d_box` (both failed: one 3D box, corrected, see Building the dataset) or `3d_box` (the same, uncorrected). `ZPI_cfg_soldierTightBox = false` always uses the one 3D box.
 
 When you press **p**, the scene freezes for 2 frames: the boxes and the screenshot are taken in the first, and everything unfreezes once the picture is saved. An object needs to be ≥ 30 % visible, ≥ 4 px, and mostly inside the image to be detected. Civilians and wrecks never get a box.
 
@@ -235,7 +233,7 @@ The class names are chosen when the dataset is built (`--classes`), so you never
 | `size` | soldier_small, soldier_large, tank, military_vehicle, explosion, tank_fire, building |
 | `stance_size` | soldier_{standing,kneeling,prone}_{small,large}, tank, military_vehicle, explosion, tank_fire, building |
 
-- **Stance** comes from the game (`stance` command). For screenshots taken with older versions, the script recovers it from the ground-truth log.
+- **Stance** comes from the game (`stance` command).
 - **Size:** small = box area below 32×32 px in the image (the COCO definition), large = everything bigger. The JSON also has the 3-step COCO size: small, medium or large.
 - **tank_fire:** the muzzle blast and smoke of a vehicle's main gun (tank cannon or autocannon; machine guns don't count). Every such shot that is in view gets an automatic picture 0.05 s after firing. When the camera could hold still before the shot, a reference picture is taken and the box is **measured** from what changed, like explosions (`"box_method": "image_difference"`); otherwise it is estimated around the muzzle. The tank itself keeps its own `tank` box. Soldiers' rifle fire is not labelled.
 
@@ -283,15 +281,15 @@ There is one file per screenshot, with the same name as the image:
  "objects": [
    {"class": "soldier_prone", "type": "soldier", "object_id": 12, "stance": "prone", "size": "small",
     "inside_building": false, "box_px": [1287.3, 597.7, 1302.7, 632.3], "box_norm": {...},
-    "world_pos_asl": [5110.1, 6290.2, 150.3], "grid": "051062", "distance_m": 214.5, "visible": 0.95,
+    "grid": "051062", "distance_m": 214.5, "visible": 0.95,
     "ground_pos_asl": [5110.12, 6290.21, 149.84], "ground_px": [1295.0, 633.1]},
-   {"class": "explosion", "box_method": "image_difference", "world_pos_asl": [...], ...}
+   {"class": "explosion", "box_method": "image_difference", "ground_pos_asl": [...], ...}
  ],
  "building_occupancy": [{"building": "Land_i_House_Big_01_V1_F", "inside": 3, "squad": 8}]
 }
 ```
 
-`world_pos_asl` uses Arma map metres: x = east, y = north, z = height above sea level. This is the same coordinate system as the orthophoto and its world file, so detected objects can be placed directly on the map.
+`ground_pos_asl` uses Arma map metres: x = east, y = north, z = height above sea level. This is the same coordinate system as the orthophoto and its world file, so detected objects can be placed directly on the map.
 
 **Geometry for localisation.** Every picture also has:
 
@@ -341,11 +339,11 @@ python tools\make_yolo_dataset.py --latest --min-green 0.05   # leave out pictur
 python tools\make_yolo_dataset.py --out dataset_pose --pose     # YOLO-pose labels: box + ground-point keypoint
 ```
 
-**Soldier boxes of older pictures.** Pictures taken before the tight soldier boxes have the loose one-3D-box labels. Pictures from the new mission log both boxes for every soldier, so the tool learns, per stance and camera pitch, how to turn the old box into the tight one (`box_calibration.json`, needs 40+ soldiers from new pictures) and corrects the soldiers of the older pictures with it. At the end it prints how far the box bottom of standing soldiers is below the feet, per box method; tight and corrected boxes should be close to 0. The dataset folder is built incrementally, so after taking new pictures **build into a new folder** (`--out dataset_v2`) or delete the old one, otherwise the older pictures keep their old labels. `--no-box-fix` turns the correction off.
+**Soldier boxes without a tight box.** When the body-part and hit-point boxes both fail, a soldier keeps the loose one-3D-box label. Every soldier logs both boxes, so the tool learns, per stance and camera pitch, how to turn the 3D box into the tight one (`box_calibration.json`, needs 40+ soldiers) and corrects those soldiers with it. At the end it prints how far the box bottom of standing soldiers is below the feet, per box method; tight and corrected boxes should be close to 0. `--no-box-fix` turns the correction off.
 
 **Ground-point keypoint (`--pose`).** Every label line also gets one keypoint, the object's ground point (`ground_px`: a soldier's feet, the terrain under a vehicle's hull centre, an explosion's impact point; buildings and gun fire get none), and `data.yaml` gets `kpt_shape: [1, 3]`. Train it as YOLO-pose (`yolo pose train model=yolo11s-pose.pt data=output\dataset_pose\data.yaml ...`) and the detector predicts the ground point directly: localisation then no longer depends on how the box edges sit. A pose dataset is its own folder (one folder = one format).
 
-**Filters.** Pictures with more than 3 labelled buildings are left out (`--max-buildings`, `-1` keeps all), so this also cleans up older sessions. `--min-green` leaves out pictures with too little green (the share of green pixels, 0–1). `manifest.csv` lists `green_fraction`, `ground_surface` and the burst of every picture, so pick the threshold from real numbers first. A damaged or half-written PNG (e.g. after a PC crash) is skipped and counted as `broken`; the rest of the dataset is built normally.
+**Filters.** Pictures with more than 3 labelled buildings are left out (`--max-buildings`, `-1` keeps all). `--min-green` leaves out pictures with too little green (the share of green pixels, 0–1). `manifest.csv` lists `green_fraction`, `ground_surface` and the burst of every picture, so pick the threshold from real numbers first. A damaged or half-written PNG (e.g. after a PC crash) is skipped and counted as `broken`; the rest of the dataset is built normally.
 
 The output in `output\dataset\` is: `images/`, `labels/`, `data.yaml`, `meta/` (JSON per screenshot), `previews/` (check these!), `manifest.csv` and `scheme.txt`. The split goes by location marker (region) when there are 2 or more regions, otherwise by scene instance. For Roboflow: don't re-split, and don't resize to 640.
 
