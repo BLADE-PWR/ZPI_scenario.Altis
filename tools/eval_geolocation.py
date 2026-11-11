@@ -221,7 +221,7 @@ def main():
             continue
         cam = Camera(m, args.square_pixels)
         terr = Terrain(m)
-        for c in m.get("projection_check_px") or []:
+        for c in m["projection_check_px"]:
             proj_chk.append(math.hypot(*c))
         name = mp.stem
         gts = []
@@ -267,7 +267,7 @@ def main():
             pf = Path(args.pred) / f"{name}.txt"
             if not pf.exists():
                 continue
-            classes = m.get("classes") or []
+            classes = m["classes"]
             dets = []
             for line in pf.read_text().split("\n"):
                 v = line.split()

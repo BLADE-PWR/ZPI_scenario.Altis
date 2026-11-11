@@ -70,7 +70,7 @@ def build(o: dict, dirs: list[Path], outdir: Path, mpp: float | None, tag: str):
     # tile geometry
     tiles = []
     for t in o["tiles"]:
-        if not t.get("ok", True):
+        if not t["ok"]:
             continue
         p = zpi_paths.find_image(t["image"], dirs)
         if p is None:
@@ -182,9 +182,9 @@ def build(o: dict, dirs: list[Path], outdir: Path, mpp: float | None, tag: str):
         w = csv.writer(f)
         w.writerow(["id", "type", "stance", "x_m", "y_m", "z_asl_m", "dir_deg", "inside_building", "px", "py"])
         w.writerows(rows)
-    info = {"tag": tag, "world": meta.get("world"), "scene": meta.get("scene"), "m_per_px": mpp,
+    info = {"tag": tag, "world": meta["world"], "scene": meta["scene"], "m_per_px": mpp,
             "extent": {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax}, "size_px": [MW, MH],
-            "tiles": len(tiles), "objects": len(rows), "time_label": meta.get("time_label"), "weather": meta.get("weather"),
+            "tiles": len(tiles), "objects": len(rows), "time_label": meta["time_label"], "weather": meta["weather"],
             "pixel_to_world": "x = xmin + (px + 0.5) * m_per_px ;  y = ymax - (py + 0.5) * m_per_px"}
     base.with_suffix(".json").write_text(json.dumps(info, indent=1), encoding="utf-8")
     print(f"  {base.with_suffix('.png')}  ({MW} x {MH} px, {mpp} m/px, {len(tiles)} tiles)")

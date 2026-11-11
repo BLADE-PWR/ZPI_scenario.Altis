@@ -20,7 +20,6 @@ import argparse
 import json
 import re
 import sys
-import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -40,10 +39,10 @@ def parse_line(line: str):
 
 
 class Session:
-    def __init__(self, root: Path, index: int, start_evt: dict | None):
-        data = (start_evt or {}).get("data", {})
-        world = data.get("world", "unknown")
-        tag = data.get("session") or f"{index:02d}_{time.strftime('%Y%m%d_%H%M%S')}"
+    def __init__(self, root: Path, start_evt: dict):
+        data = start_evt["data"]
+        world = data["world"]
+        tag = data["session"]
         self.dir = root / f"session_{tag}_{world}"     # same name as the screenshot folder
         self.dir.mkdir(parents=True, exist_ok=True)
         self.files = {
@@ -109,10 +108,7 @@ def extract(rpts, out_root: Path) -> list[Session]:
                 if kind == "evt" and rec.get("kind") == "session_start":
                     if current:
                         current.close()
-                    current = Session(out_root, len(sessions), rec)
-                    sessions.append(current)
-                if current is None:  # records before any session_start (log started mid-mission)
-                    current = Session(out_root, len(sessions), None)
+                    current = Session(out_root, rec)
                     sessions.append(current)
                 current.add(kind, rec)
         if current:

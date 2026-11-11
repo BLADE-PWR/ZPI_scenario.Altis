@@ -26,7 +26,6 @@ ZPI_cfg_minVisible    = 0.3;     // fraction of the object visible (trees, walls
 ZPI_cfg_minInFrame    = 0.35;    // fraction of the box inside the image (cut at edges)
 ZPI_cfg_maxLabelDist  = 3000;    // m
 ZPI_cfg_soldierPad    = 0.12;    // m of padding around the soldier's body points (one-3D-box method, also the visibility test)
-ZPI_cfg_soldierTightBox = true;  // label = union of the projected body parts (tight); false = one projected 3D box (old, loose at the bottom)
 ZPI_cfg_soldierPartPad  = 0.03;  // m around each body part (uniform, vest)
 ZPI_cfg_soldierHelmet   = 0.08;  // m added above the head (helmet)
 ZPI_cfg_soldierBackpack = 0.22;  // m added behind the back when he carries a backpack

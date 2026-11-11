@@ -5,7 +5,7 @@ Start from clean folders: deletes the tool outputs, the screenshots and the old 
     python tools/clean_start.py            # shows what would be deleted, asks before deleting
     python tools/clean_start.py --yes      # no question
 
-Deleted:
+What would be deleted:
   - everything in <mission>\\output\\ (datasets, orthophotos, sessions, geolocation results),
     except trained models (runs\\ folders and *.pt files)
   - the zpi folder in the Arma Screenshots folder (all screenshot sessions)

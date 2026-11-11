@@ -87,7 +87,7 @@ def default_rpts() -> list[Path]:
 # ---------------------------------------------------------------- reading the log
 def _box_to_obj(b) -> dict:
     """One box from the log -> object dict.
-    [kind, cx, cy, w, h, id, vis, cut, stance, dist, inside, grid, gx, gy, gz, gu, gv, method, box_3d]"""
+    [kind, cx, cy, w, h, id, vis, cut, stance, dist, inside, grid, gx, gy, gz, gu, gv, method]"""
     o = {"kind": b[0], "cx": float(b[1]), "cy": float(b[2]), "w": float(b[3]), "h": float(b[4]),
          "object_id": int(b[5]), "visible": float(b[6]), "cut_by_edge": float(b[7]),
          "stance_raw": b[8], "stance_source": "game",
@@ -97,8 +97,6 @@ def _box_to_obj(b) -> dict:
          "ground_norm": [float(b[15]), float(b[16])] if b[15] is not None else None}
     if o["kind"] == "s":
         o["soldier_box"] = {"v": "body_parts", "h": "hit_point_parts"}.get(b[17], "3d_box")
-        if isinstance(b[18], list) and len(b[18]) == 4:
-            o["box_3d"] = [float(v) for v in b[18]]
     return o
 
 
@@ -133,7 +131,7 @@ def read_labels(rpts: list[Path], diag: Counter | None = None) -> list[dict]:
                     continue
                 if kind == "evt":
                     if rec.get("kind") == "session_start":
-                        session = rec.get("data", {}).get("session", session)
+                        session = rec["data"]["session"]
                     continue
                 if kind == "dem":
                     dems[rec["image"]][rec["part"]] = rec
@@ -153,7 +151,7 @@ def read_labels(rpts: list[Path], diag: Counter | None = None) -> list[dict]:
                     continue
                 p = parts.pop(key)
                 objs = [_box_to_obj(b) for k in sorted(p) for b in p[k]["boxes"]]
-                r = {**shots.pop(key), **shotx.pop(key, {})}
+                r = {**shots.pop(key), **shotx.pop(key)}
                 r["objects"] = objs
                 r["session"] = session
                 d = dems.pop(key, {})
@@ -344,9 +342,9 @@ def explosion_box_from_diff(ref_path: Path, img_path: Path, o: dict, others: lis
 # ---------------------------------------------------------------- split / names
 def pick_split(rec: dict, mode: str, val_regions: set[int], test_regions: set[int]) -> str:
     if mode == "region":
-        r = int(rec.get("region", 0))
+        r = rec["region"]
         return "test" if r in test_regions else "val" if r in val_regions else "train"
-    key = f'{rec["session"]}|{rec.get("scene")}|{rec.get("seed")}'.encode()
+    key = f'{rec["session"]}|{rec["scene"]}|{rec["seed"]}'.encode()
     h = int(hashlib.md5(key).hexdigest(), 16) % 10
     return "test" if h == 0 else "val" if h == 1 else "train"
 
@@ -372,85 +370,6 @@ def write_yaml(out: Path, classes: list[str], pose: bool = False):
         lines += ["kpt_shape: [1, 3]", "flip_idx: [0]"]
     lines += [f"nc: {len(classes)}", "names:"] + [f"  {i}: {n}" for i, n in enumerate(classes)]
     (out / "data.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-# ---------------------------------------------------------------- soldiers without a tight box
-# When the body-part and hit-point boxes both fail, a soldier keeps ONE 3D box around his body, which
-# seen from above at an angle is loose at the bottom (10-40 % of its height) and a bit too wide. Every
-# soldier logs both boxes, so the tool learns how to turn the 3D box into the tight one (per stance,
-# depending on the camera pitch) and applies it to those soldiers.
-
-CAL_MIN_PAIRS = 40
-
-
-def _stance_key(o: dict) -> str:
-    s = (o.get("stance_raw") or "").upper()
-    return s if s in ("STAND", "CROUCH", "PRONE") else "ANY"
-
-
-def _edges(cx, cy, w, h):
-    return cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2
-
-
-def fit_box_calibration(records: list[dict]) -> dict:
-    """Learn tight-box edges from the 3D box: per stance, each edge offset (in units of the 3D
-    box width / height) = a + b * |pitch|/90, least squares. -> {stance: {...}} (only with enough pairs)."""
-    import statistics
-    pairs: dict[str, list] = {}
-    for rec in records:
-        p = rec["cam"]["pitch"]
-        for o in rec["objects"]:
-            if o["kind"] != "s" or not o.get("box_3d") or o.get("soldier_box") == "3d_box" or o.get("inside_building"):
-                continue
-            ox0, oy0, ox1, oy1 = _edges(*o["box_3d"])
-            tx0, ty0, tx1, ty1 = _edges(o["cx"], o["cy"], o["w"], o["h"])
-            ow, oh = ox1 - ox0, oy1 - oy0
-            if ow <= 0 or oh <= 0 or ox0 < 0 or oy0 < 0 or ox1 > 1 or oy1 > 1:
-                continue                      # cut by the image edge: the boxes are not comparable
-            row = (abs(p) / 90.0, (tx0 - ox0) / ow, (ox1 - tx1) / ow, (ty0 - oy0) / oh, (oy1 - ty1) / oh)
-            pairs.setdefault(_stance_key(o), []).append(row)
-            pairs.setdefault("ANY", []).append(row)
-    cal = {}
-    for st, rows in pairs.items():
-        if len(rows) < CAL_MIN_PAIRS:
-            continue
-        xs = [r[0] for r in rows]
-        mx = sum(xs) / len(xs)
-        sxx = sum((x - mx) ** 2 for x in xs)
-        coef, resid = [], []
-        for k in range(1, 5):
-            ys = [r[k] for r in rows]
-            my = sum(ys) / len(ys)
-            b = (sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx) if sxx > 1e-9 else 0.0
-            a = my - b * mx
-            coef.append([round(a, 5), round(b, 5)])
-            resid.append(round(statistics.median(abs(y - (a + b * x)) for x, y in zip(xs, ys)), 4))
-        cal[st] = {"pairs": len(rows), "edges": ["left", "right", "top", "bottom"], "coef_a_b": coef,
-                   "median_residual_of_3d_box_size": resid}
-    return cal
-
-
-def apply_box_calibration(rec: dict, cal: dict, stats: Counter):
-    """Tighten the one-3D-box soldier boxes of a picture with the learned calibration."""
-    p = rec["cam"]["pitch"]
-    for o in rec["objects"]:
-        if o["kind"] != "s" or o.get("soldier_box") != "3d_box":
-            continue
-        c = cal.get(_stance_key(o)) or cal.get("ANY")
-        if c is None:
-            stats["soldier_box_loose"] += 1
-            continue
-        x = abs(p) / 90.0
-        dl, dr, dt, db = (a + b * x for a, b in c["coef_a_b"])
-        x0, y0, x1, y1 = _edges(o["cx"], o["cy"], o["w"], o["h"])
-        w, h = x1 - x0, y1 - y0
-        nx0, nx1, ny0, ny1 = x0 + dl * w, x1 - dr * w, y0 + dt * h, y1 - db * h
-        if nx1 - nx0 < 0.2 * w or ny1 - ny0 < 0.2 * h:
-            stats["soldier_box_loose"] += 1
-            continue
-        o["cx"], o["cy"], o["w"], o["h"] = (nx0 + nx1) / 2, (ny0 + ny1) / 2, nx1 - nx0, ny1 - ny0
-        o["soldier_box"] = "corrected_3d_box"
-        stats["soldier_box_corrected"] += 1
 
 
 def image_ok(p: Path) -> bool:
@@ -494,12 +413,11 @@ def image_size(p: Path) -> tuple[int, int]:
 
 
 def build_meta(rec: dict, name: str, split: str, W: int, H: int, classes: list[str], scheme: str, ref_rel: str | None) -> dict:
-    cam = rec.get("cam") or {}
-    laser = rec.get("laser")
+    cam = rec["cam"]
+    laser = rec["laser"]
     gsd = None
-    if laser and laser.get("range") and cam.get("hfov"):
+    if laser:
         gsd = 2 * float(laser["range"]) * math.tan(math.radians(float(cam["hfov"]) / 2)) / W
-    burst = rec.get("burst")
     objs = []
     for o in rec["objects"]:
         cname = class_name(o, scheme, W, H)
@@ -514,44 +432,42 @@ def build_meta(rec: dict, name: str, split: str, W: int, H: int, classes: list[s
         if o.get("ground_norm"):
             e["ground_px"] = [round(o["ground_norm"][0] * W, 2), round(o["ground_norm"][1] * H, 2)]
         if o["kind"] == "s":
-            e["box_method"] = o.get("soldier_box", "3d_box")
+            e["box_method"] = o["soldier_box"]
             e["stance"] = stance_of(o, W, H)
             e["stance_source"] = o["stance_source"]
             e["inside_building"] = o["inside_building"]
         if o["kind"] in ("e", "f"):
-            e["box_method"] = o.get("box_method", "estimated")
+            e["box_method"] = o["box_method"]
         objs.append(e)
     return {
         "image": f"images/{split}/{name}.png", "source_screenshot": rec["image"], "width": W, "height": H,
-        "session": rec["session"], "frame": rec.get("frame"), "t_game": rec.get("t_game"),
-        "world": rec.get("world"), "scene": rec.get("scene"), "seed": rec.get("seed"), "region": rec.get("region"),
-        "camera": {"pos_asl": cam.get("pos_asl"), "grid": cam.get("grid"),
-                   "alt_asl_m": cam.get("alt_asl"), "alt_agl_m": cam.get("alt_agl"),
-                   "heading_deg": cam.get("hdg"), "pitch_deg": cam.get("pitch"), "bank_deg": cam.get("bank"),
-                   "hfov_deg": cam.get("hfov"), "vfov_deg": cam.get("vfov"),
-                   "right_axis": cam.get("x_axis"), "up_axis": cam.get("y_axis"), "forward_axis": cam.get("z_axis")},
-        "intrinsics": ({"fx": round((W / 2) / math.tan(math.radians(float(cam["hfov"]) / 2)), 3),
+        "session": rec["session"], "frame": rec["frame"], "t_game": rec["t_game"],
+        "world": rec["world"], "scene": rec["scene"], "seed": rec["seed"], "region": rec["region"],
+        "camera": {"pos_asl": cam["pos_asl"], "grid": cam["grid"],
+                   "alt_asl_m": cam["alt_asl"], "alt_agl_m": cam["alt_agl"],
+                   "heading_deg": cam["hdg"], "pitch_deg": cam["pitch"], "bank_deg": cam["bank"],
+                   "hfov_deg": cam["hfov"], "vfov_deg": cam["vfov"],
+                   "right_axis": cam["x_axis"], "up_axis": cam["y_axis"], "forward_axis": cam["z_axis"]},
+        "intrinsics": {"fx": round((W / 2) / math.tan(math.radians(float(cam["hfov"]) / 2)), 3),
                         "fy": round((H / 2) / math.tan(math.radians(float(cam["vfov"]) / 2)), 3),
                         "cx": W / 2, "cy": H / 2,
-                        "note": "pinhole; pixel (u, v) from the top-left corner; ray = forward + right*(u-cx)/fx - up*(v-cy)/fy"}
-                       if cam.get("hfov") and cam.get("vfov") else None),
-        "projection_check_px": cam.get("proj_check_px"),
+                        "note": "pinhole; pixel (u, v) from the top-left corner; ray = forward + right*(u-cx)/fx - up*(v-cy)/fy"},
+        "projection_check_px": cam["proj_check_px"],
         "laser_rangefinder": laser,
         "gsd_center_m_per_px": round(gsd, 5) if gsd else None,
-        "scale_lock": rec.get("scale_lock"), "target_gsd": rec.get("target_gsd"),
-        "environment": {"time_label": rec.get("time_label"), "daytime_h": rec.get("daytime"), "weather": rec.get("weather")},
+        "scale_lock": rec["scale_lock"], "target_gsd": rec["target_gsd"],
+        "environment": {"time_label": rec["time_label"], "daytime_h": rec["daytime"], "weather": rec["weather"]},
         "class_scheme": scheme, "classes": classes,
         "objects": objs,
-        "building_occupancy": rec.get("occupancy") or [],
+        "building_occupancy": rec["occupancy"],
         "explosion_reference_image": ref_rel,
         # pictures of one burst were taken from the same camera position, 2 s apart
-        "burst": ({"id": burst, "index": int(rec.get("burst_idx") or 0) + 1, "length": rec.get("burst_len")}
-                  if isinstance(burst, (int, float)) and burst >= 0 else None),
-        "ground_surface": rec.get("surface") or None,
+        "burst": ({"id": rec["burst"], "index": rec["burst_idx"] + 1, "length": rec["burst_len"]} if rec["burst"] >= 0 else None),
+        "ground_surface": rec["surface"] or None,
         "green_fraction": rec.get("_green"),
         "buildings_in_picture": sum(1 for o in rec["objects"] if o["kind"] == "b"),
         # generator stage the picture was taken in (ZPI_cfg_tourPlan: far, tank_fire, prone, ...; "" = normal run)
-        "tour_stage": rec.get("stage") or None,
+        "tour_stage": rec["stage"] or None,
         "terrain_grid": rec.get("terrain_grid"),
         # [u, v, x, y, z, kind, object_id]: what the image point (u, v normalized) really hits;
         # kind g ground, b building, t tree/bush, e scene object, o other
@@ -656,11 +572,9 @@ def process(records: list[dict], shot_dirs: list[Path], out: Path, args, seen: s
             else:
                 stats[f"{what}_estimated"] += 1
 
-        if args.box_calibration:
-            apply_box_calibration(rec, args.box_calibration, stats)
         for o in rec["objects"]:
             if o["kind"] == "s":
-                stats["soldier_box_" + {"body_parts": "tight", "hit_point_parts": "tight_hitpoints"}.get(o.get("soldier_box"), "x")] += 1
+                stats["soldier_box_" + {"body_parts": "tight", "hit_point_parts": "tight_hitpoints"}.get(o["soldier_box"], "x")] += 1
         stats.pop("soldier_box_x", None)
 
         split = pick_split(rec, args.split, args.val_regions, args.test_regions)
@@ -689,46 +603,20 @@ def process(records: list[dict], shot_dirs: list[Path], out: Path, args, seen: s
     return added
 
 
-def report_box_fit(out: Path):
-    """How far the bottom of a standing soldier's box is below his feet (ground point), per box method.
-    Tight boxes: a few % of the box height (toes, boots). One 3D box: 10-40 %."""
-    import statistics
-    groups: dict[str, list] = {}
-    for mp in (out / "meta").glob("*.json"):
-        try:
-            m = json.loads(mp.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        for o in m.get("objects", []):
-            if o.get("type") != "soldier" or o.get("stance") != "standing" or o.get("inside_building") or not o.get("ground_px"):
-                continue
-            x0, y0, x1, y1 = o["box_px"]
-            h = y1 - y0
-            if h < 12 or y1 >= m["height"] - 1 or y0 <= 0:
-                continue
-            gx, gy = o["ground_px"]
-            groups.setdefault(o.get("box_method", "3d_box"), []).append(((y1 - gy) / h, (x0 + x1) / 2 - gx))
-    if not groups:
-        return
-    print("\nstanding soldiers, box bottom below the feet (share of box height) / box centre right of the feet (px):")
-    for k, v in sorted(groups.items()):
-        print(f"  {k:<18} {len(v):5d} boxes   bottom {statistics.median(r[0] for r in v):+.2f}   centre {statistics.median(r[1] for r in v):+.1f} px")
-
-
 def write_manifest(out: Path, classes: list[str]):
     """Rebuild manifest.csv from what is actually in the dataset (always consistent)."""
     rows = []
     for s in SPLITS:
         for img in sorted((out / "images" / s).glob("*.png")):
             mp = out / "meta" / f"{img.stem}.json"
-            m = json.loads(mp.read_text(encoding="utf-8")) if mp.exists() else {}
-            c = Counter(e["class"] for e in m.get("objects", []))
-            env = m.get("environment", {})
-            b = m.get("burst") or {}
-            rows.append([img.stem, s, m.get("scene"), m.get("seed"), m.get("region"), m.get("camera", {}).get("hfov_deg"),
-                         m.get("gsd_center_m_per_px"), env.get("time_label"), env.get("weather"), m.get("scale_lock"),
-                         sum(c.values())] + [c.get(n, 0) for n in classes]
-                        + [b.get("id", ""), b.get("index", ""), m.get("green_fraction"), m.get("ground_surface"), m.get("tour_stage") or ""])
+            m = json.loads(mp.read_text(encoding="utf-8"))
+            c = Counter(e["class"] for e in m["objects"])
+            env = m["environment"]
+            b = m["burst"] or {"id": "", "index": ""}
+            rows.append([img.stem, s, m["scene"], m["seed"], m["region"], m["camera"]["hfov_deg"],
+                         m["gsd_center_m_per_px"], env["time_label"], env["weather"], m["scale_lock"],
+                         sum(c.values())] + [c[n] for n in classes]
+                        + [b["id"], b["index"], m["green_fraction"], m["ground_surface"], m["tour_stage"]])
     with open(out / "manifest.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["name", "split", "scene", "seed", "region", "hfov_deg", "gsd_m_per_px", "time", "weather",
@@ -822,8 +710,6 @@ def main():
     ap.add_argument("--pose", action="store_true",
                     help="YOLO-pose labels: every box also gets one keypoint, the ground point (feet / under the hull / "
                          "impact point); train with a -pose model so the detector predicts the ground point directly")
-    ap.add_argument("--no-box-fix", dest="box_fix", action="store_false",
-                    help="keep the loose one-3D-box soldier boxes as they are")
     ap.add_argument("--max-buildings", type=int, default=3,
                     help="leave out pictures with more labelled buildings than this (default 3, -1 = keep all)")
     ap.add_argument("--min-green", type=float, default=0.0,
@@ -870,16 +756,6 @@ def main():
 
     diag: Counter = Counter()
     records = read_labels(rpts, diag)
-    # soldiers whose tight box failed (one 3D box): learn the correction from soldiers that have both boxes
-    args.box_calibration = fit_box_calibration(records) if args.box_fix else {}
-    n_loose = sum(1 for r in records for o in r["objects"] if o["kind"] == "s" and o.get("soldier_box") == "3d_box")
-    if args.box_calibration:
-        (out / "box_calibration.json").write_text(json.dumps(args.box_calibration, indent=1), encoding="utf-8")
-        print("soldier box correction (for soldiers without a tight box) learned from "
-              + ", ".join(f"{k} {v['pairs']}" for k, v in args.box_calibration.items()) + " pairs (box_calibration.json)")
-    elif n_loose and args.box_fix:
-        print(f"NOTE: {n_loose} soldier boxes are one 3D box (loose at the bottom, the tight box failed). They are corrected\n"
-              f"      once the logs have {CAL_MIN_PAIRS}+ soldiers with both boxes.")
     sessions_all = list(dict.fromkeys(r["session"] for r in records))
     if args.latest and sessions_all:
         args.session = [sessions_all[-1]]
@@ -890,7 +766,7 @@ def main():
         records = [r for r in records if r["ok"]][:args.limit]
         print(f"limited to the first {len(records)} screenshots")
     if args.split == "auto":
-        regions = {int(r.get("region", 0)) for r in records}
+        regions = {r["region"] for r in records}
         args.split = "region" if len(regions - {-1}) >= 2 else "scene"
     print(f"logs read: {len(rpts)} file(s) in {rpts[-1].parent}")
     print(f"screenshot folders: {', '.join(map(str, shot_dirs))}")
@@ -936,7 +812,6 @@ def main():
     if stages:
         print("pictures per generator stage: " + ", ".join(f"{k} {v}" for k, v in stages.items()))
 
-    report_box_fit(out)
     if args.roboflow:
         export_roboflow(out, args.jpg, classes)
 

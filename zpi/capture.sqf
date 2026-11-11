@@ -14,7 +14,7 @@
 //    ZPI|shotx|  laser rangefinder, scene, time, weather, explosion reference image, building occupancy
 //    ZPI|dem|    terrain heights on a grid under the view;  ZPI|ray|  what 9 x 5 image points hit
 //    ZPI|label|  boxes, in parts: [kind, cx, cy, w, h, id, visible, cut, stance, dist, inside, grid,
-//                gx, gy, gz, gu, gv, method, box3d]  (g = ground point ASL and its normalized image position)
+//                gx, gy, gz, gu, gv, method]  (g = ground point ASL and its normalized image position)
 //                kind: "s" soldier, "t" tank (tracked), "v" military vehicle (wheeled), "e" explosion,
 //                      "f" gun firing (muzzle blast of a tank / IFV main gun), "b" building
 //  tools/make_yolo_dataset.py turns them into YOLO labels + one JSON per screenshot.
@@ -241,9 +241,9 @@ ZPI_fnc_buildingOf = {          // [unit] -> building he is inside, or objNull
 };
 
 // Clip, filter and format one box. Returns "" when the box is rejected.
-// _g = ground point ASL (feet / terrain under the hull or building / impact point); _meth, _old: soldiers only
+// _g = ground point ASL (feet / terrain under the hull or building / impact point); _meth: soldiers only
 ZPI_fnc_finishBox = {
-    params ["_kind", "_box", "_id", "_vis", "_W", "_H", "_stance", "_inside", "_g", "_basis", "_th", "_tv", ["_meth", ""], ["_old", []]];
+    params ["_kind", "_box", "_id", "_vis", "_W", "_H", "_stance", "_inside", "_g", "_basis", "_th", "_tv", ["_meth", ""]];
     if (_box isEqualTo []) exitWith { "" };
     _box params ["_x0", "_y0", "_x1", "_y1"];
     private _area = (_x1 - _x0) * (_y1 - _y0);
@@ -260,16 +260,11 @@ ZPI_fnc_finishBox = {
     private _gn = [_g, _basis, _th, _tv] call ZPI_fnc_projectN;
     // fields 13-15: ground point ASL; 16-17: its normalized image position (null when behind the camera)
     // field 18: soldier box method ("v" body bones, "h" hit-point parts, "" one 3D box)
-    // field 19: soldiers: the one-3D-box label [cx, cy, w, h] (calibrates soldiers whose bone box failed)
-    format ['["%1",%2,%3,%4,%5,%6,%7,%8,"%9",%10,%11,"%12",%13,%14,%15,%16,%17,"%18",%19]',
+    format ['["%1",%2,%3,%4,%5,%6,%7,%8,"%9",%10,%11,"%12",%13,%14,%15,%16,%17,"%18"]',
         _kind, ((_cx0 + _cx1) / 2) toFixed 5, ((_cy0 + _cy1) / 2) toFixed 5, (_cx1 - _cx0) toFixed 5, (_cy1 - _cy0) toFixed 5,
         _id, _vis toFixed 2, (1 - _inFrac) toFixed 2, _stance, ((_basis select 0) vectorDistance _g) toFixed 1, [0, 1] select _inside, mapGridPosition _g,
         (_g select 0) toFixed 2, (_g select 1) toFixed 2, (_g select 2) toFixed 2,
-        ["null", (_gn select 0) toFixed 6] select (_gn isNotEqualTo []), ["null", (_gn select 1) toFixed 6] select (_gn isNotEqualTo []),
-        _meth, if (count _old == 4) then {
-            format ["[%1,%2,%3,%4]", (((_old select 0) + (_old select 2)) / 2) toFixed 5, (((_old select 1) + (_old select 3)) / 2) toFixed 5,
-                ((_old select 2) - (_old select 0)) toFixed 5, ((_old select 3) - (_old select 1)) toFixed 5]
-        } else { "null" }]
+        ["null", (_gn select 0) toFixed 6] select (_gn isNotEqualTo []), ["null", (_gn select 1) toFixed 6] select (_gn isNotEqualTo []), _meth]
 };
 
 ZPI_fnc_computeLabels = {
@@ -289,12 +284,10 @@ ZPI_fnc_computeLabels = {
         if (_kind != "" && {!isNull _obj} && {alive _obj} && {(_cam vectorDistance (getPosASL _obj)) < ZPI_cfg_maxLabelDist}) then {
             (if (_kind == "s") then { [_obj] call ZPI_fnc_soldierBox } else { [_obj] call ZPI_fnc_modelBox }) params ["_mn", "_mx"];
             private _box = [[_obj, _mn, _mx] call ZPI_fnc_corners, _basis, _th, _tv] call ZPI_fnc_boxOfPoints;
-            private _old = [];
             private _meth = "";
-            if (_kind == "s" && {_box isNotEqualTo []} && {ZPI_cfg_soldierTightBox}) then {
+            if (_kind == "s" && {_box isNotEqualTo []}) then {
                 ([_obj, [_mn, _mx], _basis, _th, _tv] call ZPI_fnc_soldierBox2D) params ["_tb", "_tm"];
                 if (_tb isNotEqualTo []) then {
-                    _old = _box;
                     _box = _tb;
                     _meth = _tm;
                 };
@@ -315,7 +308,7 @@ ZPI_fnc_computeLabels = {
                     private _bc = _obj modelToWorldVisualWorld [_c select 0, _c select 1, _mn select 2];
                     [_bc select 0, _bc select 1, getTerrainHeightASL _bc]
                 };
-                private _s = [_kind, _box, _id, _vis, _W, _H, _st, _inside, _g, _basis, _th, _tv, _meth, _old] call ZPI_fnc_finishBox;
+                private _s = [_kind, _box, _id, _vis, _W, _H, _st, _inside, _g, _basis, _th, _tv, _meth] call ZPI_fnc_finishBox;
                 if (_s != "") then { _boxes pushBack _s };
             };
         };

@@ -59,14 +59,15 @@ ZPI_center       = [0, 0, 0];
 
     call ZPI_fnc_initExtension;
     call ZPI_fnc_initLocations;
-    call ZPI_fnc_applyTime;
-    call ZPI_fnc_applyWeather;
-    call ZPI_fnc_createCamera;
-    call ZPI_fnc_initKeys;
 
     ["session_start", format ['{"world":"%1","faction":"%2","locations":%3,"product":"%4","version":"%5","resolution":%6,"session":"%7"}',
         worldName, ZPI_cfg_faction, count ZPI_locations, productVersion select 0, productVersion select 2,
         str ((getResolution) select [0, 2]), ZPI_sessionTag]] call ZPI_fnc_event;
+
+    call ZPI_fnc_applyTime;
+    call ZPI_fnc_applyWeather;
+    call ZPI_fnc_createCamera;
+    call ZPI_fnc_initKeys;
 
     addMissionEventHandler ["EachFrame", { call ZPI_fnc_onFrame }];
 
