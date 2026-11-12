@@ -14,7 +14,7 @@ ZPI_helpText = "<t size='1.1' font='RobotoCondensedBold'>ZPI drone scenes</t><br
     + "K firefight on/off &#160; Shift+K one volley<br/>"
     + "B barrage where you look<br/>"
     + "I auto-shot on explosions on/off<br/>"
-    + "Z orthophoto of the scene area<br/>"
+    + "Z orthophoto of the scene area (Z again cancels)<br/>"
     + "Home dataset generator: runs ZPI_cfg_tourPlan (Home stops)<br/><br/>"
     + "<t color='#ffd27a'>SCENES</t>  1-9, 0<br/>"
     + "1 checkpoint &#160; 2 column &#160; 3 dug-in<br/>"
@@ -63,7 +63,7 @@ ZPI_fnc_onKeyUp = {
 ZPI_fnc_onKey = {
     params ["_disp", "_key", "_shift", "_ctrl", "_alt"];
     if (_ctrl || _alt) exitWith { false };
-    if (ZPI_orthoRunning) exitWith { true };   // no input during the orthophoto flight
+    if (ZPI_orthoRunning && {_key != 44}) exitWith { true }; // orthophoto flight: only Z can cancel
     if (ZPI_tourRunning && {_key != 199} && {_key != 22} && {_key != 35}) exitWith { true };   // tour: only Home, U, H
     ZPI_keysDown set [_key, true];
     if (_key in ZPI_moveKeys) exitWith { true };

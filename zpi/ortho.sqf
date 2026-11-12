@@ -15,11 +15,16 @@
 // =====================================================================
 
 ZPI_orthoRunning = false;
+ZPI_orthoStop    = false;
 
 ZPI_fnc_orthoCapture = {
-    if (ZPI_orthoRunning) exitWith { ["Orthophoto already running"] call ZPI_fnc_msg };
+    if (ZPI_orthoRunning) exitWith {
+        ZPI_orthoStop = true;
+        ["Cancelling the orthophoto after this tile"] call ZPI_fnc_msg;
+    };
     if (ZPI_frozen || {ZPI_camLock}) exitWith { ["Busy (capture in progress), try again"] call ZPI_fnc_msg };
     ZPI_orthoRunning = true;
+    ZPI_orthoStop = false;
     [] spawn {
         // ---- save the current view, hold everything still ----
         private _saved = [ZPI_camPosASL, ZPI_camDir, ZPI_camUp, ZPI_yaw, ZPI_pitch, ZPI_hfov, ZPI_scaleLock, ZPI_autoCapture, ZPI_firefight];
@@ -59,7 +64,9 @@ ZPI_fnc_orthoCapture = {
         // ---- fly the grid: rows from north to south, columns west to east ----
         private _done = 0;
         for "_r" from 0 to (_ny - 1) do {
+            if (ZPI_orthoStop) exitWith {};
             for "_k" from 0 to (_nx - 1) do {
+                if (ZPI_orthoStop) exitWith {};
                 private _tx = (_c select 0) + (_k - (_nx - 1) / 2) * _sx;
                 private _ty = (_c select 1) - (_r - (_ny - 1) / 2) * _sy;
                 private _gz = (getTerrainHeightASL [_tx, _ty]) max 0;
@@ -118,6 +125,7 @@ ZPI_fnc_orthoCapture = {
         ZPI_mouseDX = 0;
         ZPI_mouseDY = 0;
         ZPI_orthoRunning = false;
-        [format ["Orthophoto done: %1 tiles, %2 objects. Run tools/make_ortho.py", _done, count _items]] call ZPI_fnc_msg;
+        if (ZPI_orthoStop) then { [format ["Orthophoto cancelled after %1 / %2 tiles", _done, _nx * _ny]] call ZPI_fnc_msg }
+        else { [format ["Orthophoto done: %1 tiles, %2 objects. Run tools/make_ortho.py", _done, count _items]] call ZPI_fnc_msg };
     };
 };

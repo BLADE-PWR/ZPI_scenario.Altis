@@ -40,7 +40,7 @@ KIND_COL = {"t": (255, 220, 0), "v": (60, 200, 255)}
 KIND_NAME = {"s": "soldier", "t": "tank", "v": "military vehicle"}
 
 
-def read_orthos(rpts: list[Path]) -> dict[str, dict]:
+def read_orthos(rpts: list[Path], dirs: list[Path]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for rpt in rpts:
         with open(rpt, encoding="utf-8", errors="replace") as fh:
@@ -59,7 +59,14 @@ def read_orthos(rpts: list[Path]) -> dict[str, dict]:
                     o["tiles"].append(rec)
                 else:
                     o["objs"] += rec["objs"]
-    return {k: v for k, v in out.items() if v["meta"] and v["tiles"]}
+    return {k: v for k, v in out.items() if is_complete(v, dirs)}
+
+
+def is_complete(o: dict, dirs: list[Path]) -> bool:
+    """Every tile of the grid taken and on disk (not a cancelled or crashed flight)."""
+    meta = o["meta"]
+    return (meta is not None and len(o["tiles"]) == meta["nx"] * meta["ny"]
+            and all(t["ok"] and zpi_paths.find_image(t["image"], dirs) for t in o["tiles"]))
 
 
 def build(o: dict, dirs: list[Path], outdir: Path, mpp: float | None, tag: str):
@@ -70,12 +77,7 @@ def build(o: dict, dirs: list[Path], outdir: Path, mpp: float | None, tag: str):
     # tile geometry
     tiles = []
     for t in o["tiles"]:
-        if not t["ok"]:
-            continue
         p = zpi_paths.find_image(t["image"], dirs)
-        if p is None:
-            print(f"  missing tile image: {t['image']}")
-            continue
         cx, cy, cz = t["cam_pos_asl"]
         hgt = cz - float(t["ground_z"])
         fw = 2 * hgt * math.tan(math.radians(float(t["hfov"]) / 2))
@@ -203,9 +205,9 @@ def main():
     args = ap.parse_args()
     rpts = [Path(r) for r in args.rpt] if args.rpt else zpi_paths.rpt_files()
     dirs = [Path(s) for s in args.shots] if args.shots else [zpi_paths.SCREENSHOT_DIR]
-    orthos = read_orthos(rpts)
+    orthos = read_orthos(rpts, dirs)
     if not orthos:
-        sys.exit("No orthophoto found in the logs. Press Z in the mission first.")
+        sys.exit("No orthophoto found in the logs. Press Z in the mission and let it finish.")
     if args.list:
         for k, v in orthos.items():
             print(f"{k}: {len(v['tiles'])} tiles, {len(v['objs'])} objects, scene {v['meta'].get('scene')}")
