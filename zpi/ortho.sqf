@@ -10,7 +10,7 @@
 //
 //  Log records:
 //    ZPI|ortho|     {"ortho":tag, "center", "size", "step":[x,y], "nx","ny", ...}
-//    ZPI|otile|     {"ortho":tag, "image", "row", "col", "cam_pos_asl", "ground_z", "hfov", "vfov"}
+//    ZPI|otile|     {"ortho":tag, "image", "ok", "row", "col", "cam_pos_asl", "ground_z", "hfov", "vfov", "x_axis", "y_axis"}
 //    ZPI|oobj|      {"ortho":tag, "objs":[[id, kind, stance, x, y, z, dir, inside], ...]}
 // =====================================================================
 
@@ -43,10 +43,10 @@ ZPI_fnc_orthoCapture = {
         // ---- tile grid ----
         private _c = ZPI_center;
         private _H = ZPI_cfg_orthoAlt;
-        private _w = 2 * _H * (tan (ZPI_hfov / 2));
-        private _h = 2 * _H * (tan (ZPI_vfov / 2));
-        private _sx = _w * (1 - ZPI_cfg_orthoOverlap);
-        private _sy = _h * (1 - ZPI_cfg_orthoOverlap);
+        private _tileW = 2 * _H * (tan (ZPI_hfov / 2));
+        private _tileH = 2 * _H * (tan (ZPI_vfov / 2));
+        private _sx = _tileW * (1 - ZPI_cfg_orthoOverlap);
+        private _sy = _tileH * (1 - ZPI_cfg_orthoOverlap);
         private _nx = ceil (ZPI_cfg_orthoSize / _sx);
         private _ny = ceil (ZPI_cfg_orthoSize / _sy);
         private _tag = format ["%1_%2", ZPI_sessionTag, [diag_frameNo, 8] call ZPI_fnc_pad];
@@ -73,9 +73,11 @@ ZPI_fnc_orthoCapture = {
                 private _img = format ["zpi/%1/ortho_%2/tile_%3_%4.png", ZPI_sessionTag, _tag, [_r, 2] call ZPI_fnc_pad, [_k, 2] call ZPI_fnc_pad];
                 private _ok = screenshot _img;
                 (call ZPI_fnc_camBasis) params ["_o", "_rx", "_uy", "_fz"];
-                ["otile", format ['{"ortho":"%1","image":"%2","ok":%4,"row":%5,"col":%6,"cam_pos_asl":%7,"ground_z":%8,"hfov":%9,"vfov":%10,"x_axis":%11,"y_axis":%12}',
+                ["otile", format ['{"ortho":"%1","image":"%2","ok":%3,"row":%4,"col":%5,"cam_pos_asl":%6,"ground_z":%7,"hfov":%8,"vfov":%9,"x_axis":%10,"y_axis":%11}',
                     _tag, _img, _ok, _r, _k, [_o, 2] call ZPI_fnc_v3, _gz toFixed 2,
                     ZPI_hfov toFixed 4, ZPI_vfov toFixed 4, [_rx, 5] call ZPI_fnc_v3, [_uy, 5] call ZPI_fnc_v3]] call ZPI_fnc_emit;
+                private _f1 = diag_frameNo;
+                waitUntil { diag_frameNo > _f1 };
                 _done = _done + 1;
                 if (_done % 5 == 0) then { [format ["Orthophoto: %1 / %2 tiles", _done, _nx * _ny]] call ZPI_fnc_msg };
             };
