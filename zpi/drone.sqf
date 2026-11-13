@@ -116,12 +116,22 @@ ZPI_fnc_lookPoint = {
     (_hits select 0) select 0
 };
 
-// Camera: jump to a viewpoint looking at the scene center.
-// _force = false: only when the scene is out of view or far away.
+// Middle of the spawned scene objects; ZPI_center when there are none.
+ZPI_fnc_sceneMid = {
+    private _objs = ZPI_entities select { !isNull (_x select 1) };
+    if (_objs isEqualTo []) exitWith { ZPI_center };
+    private _s = [0, 0, 0];
+    { _s = _s vectorAdd (getPosATL (_x select 1)) } forEach _objs;
+    _s = _s vectorMultiply (1 / count _objs);
+    [_s select 0, _s select 1, 0]
+};
+
+// Camera: jump to a viewpoint looking at the scene.
+// _force = false: only when the scene is out of view.
 ZPI_fnc_viewScene = {
     params [["_force", false]];
-    if (!_force && {[AGLToASL [ZPI_center select 0, ZPI_center select 1, 2]] call ZPI_fnc_onScreen}) exitWith {};
-    private _c  = ZPI_center;
+    private _c  = call ZPI_fnc_sceneMid;
+    if (!_force && {[AGLToASL [_c select 0, _c select 1, 2]] call ZPI_fnc_onScreen}) exitWith {};
     private _gz = getTerrainHeightASL _c;
     private _bear = if ((ZPI_camPosASL distance2D _c) > 1) then { ZPI_camPosASL getDir _c } else { ZPI_yaw };
     private _p = _c getPos [ZPI_cfg_viewDist, _bear + 180];

@@ -76,24 +76,24 @@ ZPI_fnc_onKey = {
     if (_shift && {_key in [27, 43, 39, 40]}) exitWith { [[25, 26, 27, 28] select ([27, 43, 39, 40] find _key)] call ZPI_fnc_runScene; true };
     private _handled = true;
     switch (_key) do {
-        case 2:  { [1] call ZPI_fnc_runScene };
-        case 3:  { [2] call ZPI_fnc_runScene };
-        case 4:  { [3] call ZPI_fnc_runScene };
-        case 5:  { [4] call ZPI_fnc_runScene };
-        case 6:  { [5] call ZPI_fnc_runScene };
-        case 7:  { [6] call ZPI_fnc_runScene };
-        case 8:  { [7] call ZPI_fnc_runScene };
-        case 9:  { [8] call ZPI_fnc_runScene };
-        case 10: { [9] call ZPI_fnc_runScene };
-        case 11: { [0] call ZPI_fnc_runScene };
+        case 2:  { [1]  call ZPI_fnc_runScene };
+        case 3:  { [2]  call ZPI_fnc_runScene };
+        case 4:  { [3]  call ZPI_fnc_runScene };
+        case 5:  { [4]  call ZPI_fnc_runScene };
+        case 6:  { [5]  call ZPI_fnc_runScene };
+        case 7:  { [6]  call ZPI_fnc_runScene };
+        case 8:  { [7]  call ZPI_fnc_runScene };
+        case 9:  { [8]  call ZPI_fnc_runScene };
+        case 10: { [9]  call ZPI_fnc_runScene };
+        case 11: { [0]  call ZPI_fnc_runScene };
+        case 12: { [10] call ZPI_fnc_runScene };
+        case 26: { [11] call ZPI_fnc_runScene };
+        case 27: { [12] call ZPI_fnc_runScene };
         case 25: { if (_shift) then { call ZPI_fnc_toggleAuto } else { call ZPI_fnc_startCapture } };   // P
         case 37: { if (_shift) then { call ZPI_fnc_shoot } else { call ZPI_fnc_toggleFirefight } };   // K / Shift+K
         case 23: { call ZPI_fnc_toggleEventCapture };                       // I
         case 19: { call ZPI_fnc_toggleScaleLock };                          // R
         case 44: { call ZPI_fnc_orthoCapture };                             // Z
-        case 12: { [10] call ZPI_fnc_runScene };                            // - (minus)
-        case 26: { [11] call ZPI_fnc_runScene };                            // [ tank column
-        case 27: { [12] call ZPI_fnc_runScene };                            // ] squads split
         case 199: {                                                         // Home: automatic flight on/off
             if (ZPI_tourRunning) then {
                 ZPI_tourStop = true;

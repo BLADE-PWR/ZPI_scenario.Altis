@@ -25,9 +25,9 @@ ZPI_fnc_setCenter = {
     ZPI_center = [_pos select 0, _pos select 1, 0];
     ZPI_regionId = _region;
     ["center", format ['{"center":%1}', [ZPI_center, 1] call ZPI_fnc_v3]] call ZPI_fnc_event;
-    if (_moveCam) then { [true] call ZPI_fnc_viewScene };
     [format ["Location %1 (grid %2)", _region, mapGridPosition ZPI_center]] call ZPI_fnc_msg;
     if (ZPI_currentScene >= 0) then { [ZPI_currentScene] call ZPI_fnc_runScene };
+    if (_moveCam) then { [true] call ZPI_fnc_viewScene };
 };
 
 // Set the next location from the ZPI_locations list
