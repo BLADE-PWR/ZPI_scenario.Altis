@@ -84,6 +84,7 @@ ZPI_fnc_updateCam = {
     ZPI_pitch = (ZPI_pitch max -89.5) min 89.5;
 
     // move: input in (right, forward, up), speed grows with height above ground
+    // and drops when zoomed in past ZPI_cfg_moveFullFov (never rises above normal when zoomed out)
     private _in = [0, 0, 0];
     if ([17] call ZPI_fnc_keyHeld) then { _in set [1, (_in select 1) + 1] };   // W
     if ([31] call ZPI_fnc_keyHeld) then { _in set [1, (_in select 1) - 1] };   // S
@@ -94,7 +95,8 @@ ZPI_fnc_updateCam = {
     private _ground = (getTerrainHeightASL ZPI_camPosASL) max 0;
     private _agl = (ZPI_camPosASL select 2) - _ground;
     private _fast = ([42] call ZPI_fnc_keyHeld) || {[54] call ZPI_fnc_keyHeld};
-    private _speed = (((_agl * 0.5) max ZPI_cfg_MinSpeed) min ZPI_cfg_MaxSpeed) * ([1, ZPI_cfg_FastMul] select _fast);
+    private _zoomSlow = ((tan (ZPI_hfov / 2)) / (tan (ZPI_cfg_moveFullFov / 2))) min 1;
+    private _speed = (((_agl * 0.5) max ZPI_cfg_MinSpeed) min ZPI_cfg_MaxSpeed) * ([1, ZPI_cfg_FastMul] select _fast) * _zoomSlow;
     private _fwd   = [sin ZPI_yaw, cos ZPI_yaw, 0];
     private _right = [cos ZPI_yaw, -(sin ZPI_yaw), 0];
     private _vWant = ((_fwd vectorMultiply (_in select 1)) vectorAdd (_right vectorMultiply (_in select 0))) vectorMultiply _speed;
