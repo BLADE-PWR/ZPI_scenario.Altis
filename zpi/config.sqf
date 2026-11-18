@@ -35,6 +35,9 @@ ZPI_cfg_zoomStep     = 0.9;      // FOV multiplier per mouse-wheel (PgUp / PgDn)
 ZPI_cfg_viewDist     = 500;      // m
 ZPI_cfg_viewHeight   = 250;      // m ... and this high above it, looking at the scene
 
+ZPI_cfg_terrainGrid  = 3.125;    // terrain detail: 50 - smoothest, less lag, 25 - default in multiplayer,
+                                 //12.5 - default in single player, 6.25 - very high, 3.125 - bumpiest, higher lag
+
 // ---- labels ---------------------------------------------------------
 ZPI_cfg_minBoxPx      = 4;       // px at screen resolution; smaller boxes are dropped
 ZPI_cfg_minVisible    = 0.3;     // fraction of the object that must be visible (trees, walls, nets, terrain)

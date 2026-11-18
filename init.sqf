@@ -40,6 +40,7 @@ ZPI_center       = [0, 0, 0];
     { ZPI_negatives set [_x, [ZPI_negatives get _x] call ZPI_fnc_validClasses] } forEach ["people", "cars", "wrecks"];
 
     // ---- world ----
+    setTerrainGrid ZPI_cfg_terrainGrid;
     enableEnvironment [false, true];
     enableSaving [false, false];
     enableSentences false;
