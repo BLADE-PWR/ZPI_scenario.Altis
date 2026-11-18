@@ -67,28 +67,10 @@ ZPI_fnc_onKey = {
     if (ZPI_tourRunning && {_key != 199} && {_key != 22} && {_key != 35}) exitWith { true };   // tour: only Home, U, H
     ZPI_keysDown set [_key, true];
     if (_key in ZPI_moveKeys) exitWith { true };
-    // Shift+1 ... Shift+0: building fireteam, dismount, two buildings, single file, tank column across fields,
-    // tanks firing, long armour column, patrol across fields, patrol on a road, lone building; Shift+- groups down
-    if (_shift && {_key in [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}) exitWith { [_key + 11] call ZPI_fnc_runScene; true };
-    if (_shift && {_key == 12}) exitWith { [23] call ZPI_fnc_runScene; true };
-    if (_shift && {_key == 26}) exitWith { [24] call ZPI_fnc_runScene; true };
-    // Shift+] infantry spread out, Shift+backslash wheeled convoy, Shift+; motor pool, Shift+' clutter (no targets)
-    if (_shift && {_key in [27, 43, 39, 40]}) exitWith { [[25, 26, 27, 28] select ([27, 43, 39, 40] find _key)] call ZPI_fnc_runScene; true };
+    private _sceneIdx = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 26, 27, 43, 39, 40] find _key;
+    if (_sceneIdx >= 0 && {_shift || _sceneIdx < 13}) exitWith { [_sceneIdx + ([0, 13] select _shift)] call ZPI_fnc_runScene; true };
     private _handled = true;
     switch (_key) do {
-        case 2:  { [1]  call ZPI_fnc_runScene };
-        case 3:  { [2]  call ZPI_fnc_runScene };
-        case 4:  { [3]  call ZPI_fnc_runScene };
-        case 5:  { [4]  call ZPI_fnc_runScene };
-        case 6:  { [5]  call ZPI_fnc_runScene };
-        case 7:  { [6]  call ZPI_fnc_runScene };
-        case 8:  { [7]  call ZPI_fnc_runScene };
-        case 9:  { [8]  call ZPI_fnc_runScene };
-        case 10: { [9]  call ZPI_fnc_runScene };
-        case 11: { [0]  call ZPI_fnc_runScene };
-        case 12: { [10] call ZPI_fnc_runScene };
-        case 26: { [11] call ZPI_fnc_runScene };
-        case 27: { [12] call ZPI_fnc_runScene };
         case 25: { if (_shift) then { call ZPI_fnc_toggleAuto } else { call ZPI_fnc_startCapture } };   // P
         case 37: { if (_shift) then { call ZPI_fnc_shoot } else { call ZPI_fnc_toggleFirefight } };   // K / Shift+K
         case 23: { call ZPI_fnc_toggleEventCapture };                       // I

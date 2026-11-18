@@ -156,9 +156,9 @@ ZPI_fnc_tourSite = {
     private _green = -1;
     private _what = "";
     switch (true) do {
-        case (_scene in [7, 10, 13, 14, 15, 16, 22]): {
+        case (_scene in [6, 10, 13, 14, 15, 16, 22]): {
             private _need = switch (_scene) do {
-                case 7: { 0 };
+                case 6: { 0 };
                 case 10: { 4 };
                 case 15: { 2 };
                 default { 3 };
@@ -176,10 +176,10 @@ ZPI_fnc_tourSite = {
                 _what = (_b apply { typeOf _x }) joinString "+";
             };
         };
-        case (_scene in [1, 2, 4, 9, 11, 19, 21, 26]): {
+        case (_scene in [0, 1, 3, 8, 11, 19, 21, 26]): {
             private _r = [_anchor, _R, switch (true) do {
                 case (_scene == 19): { 8 };
-                case (_scene in [4, 11, 21, 26]): { 6 };
+                case (_scene in [3, 11, 21, 26]): { 6 };
                 default { 0 };
             }] call ZPI_fnc_siteRoad;
             if (_r isNotEqualTo []) then {

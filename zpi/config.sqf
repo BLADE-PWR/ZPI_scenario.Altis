@@ -6,7 +6,7 @@
 // ---- scene generation -----------------------------------------------
 ZPI_cfg_faction      = "CSAT";   // target faction: "CSAT" | "NATO" | "AAF"
 ZPI_cfg_seed         = 1;        // base seed; same seed + same location = same layout (N key = seed+1)
-ZPI_cfg_startScene   = 6;        // scene launched at mission start (-1 = none)
+ZPI_cfg_startScene   = 5;        // scene launched at mission start (-1 = none)
 
 // ---- camera ---------------------------------------------------------
 ZPI_cfg_mouseSens     = 15;      // mouse sensitivity (higher = faster)
@@ -71,11 +71,11 @@ ZPI_cfg_tourTime      = 1;       // index into ZPI_timePresets (env.sqf)
 ZPI_cfg_tourWeather   = 0;       // index into ZPI_weatherPresets (env.sqf)
 // scenes per location visit, by index in ZPI_scenes (scenes.sqf). A scene listed twice is visited
 // twice per round (new site, new layout).
-ZPI_cfg_tourScenes    = [6, 1, 2, 3, 7, 8, 9, 5, 4, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-                         19, 20, 21, 22, 23,  11, 17, 19, 5, 20, 21, 22, 23];
+ZPI_cfg_tourScenes    = [5, 0, 1, 2, 6, 7, 8, 4, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+                         19, 20, 21, 22, 23,  11, 17, 19, 4, 20, 21, 22, 23];
 // pictures per scene visit (scene -> count); scenes not listed get a default count (tour.sqf)
-ZPI_cfg_tourShots     = createHashMapFromArray [[6, 10], [1, 10], [2, 10], [3, 10], [7, 10], [8, 10], [9, 6],
-                                                [5, 15], [4, 15], [10, 20], [11, 20], [12, 15],
+ZPI_cfg_tourShots     = createHashMapFromArray [[5, 10], [0, 10], [1, 10], [2, 10], [6, 10], [7, 10], [8, 6],
+                                                [4, 15], [3, 15], [10, 20], [11, 20], [12, 15],
                                                 [13, 15], [14, 15], [15, 15], [16, 15], [17, 20], [18, 15],
                                                 [19, 20], [20, 15], [21, 15], [22, 25], [23, 15]];
 ZPI_cfg_tourExplosions = 1;      // explosion close-ups per scene visit
@@ -122,9 +122,9 @@ ZPI_cfg_tourPlan = [
 ZPI_tourProfiles = createHashMapFromArray [
     ["far", createHashMapFromArray [
         // scenes with soldiers: patrols, groups down, infantry spread out, checkpoint, dug-in, ...
-        ["ZPI_cfg_tourScenes", [25, 25, 25, 20, 21, 23, 23, 5, 12, 3, 1, 8, 6, 22]],
-        ["ZPI_cfg_tourShots", createHashMapFromArray [[25, 20], [20, 15], [21, 15], [23, 15], [5, 15], [12, 15], [3, 12],
-                                                      [1, 12], [8, 10], [6, 10], [22, 15]]],
+        ["ZPI_cfg_tourScenes", [25, 25, 25, 20, 21, 23, 23, 4, 12, 2, 0, 7, 5, 22]],
+        ["ZPI_cfg_tourShots", createHashMapFromArray [[25, 20], [20, 15], [21, 15], [23, 15], [4, 15], [12, 15], [2, 12],
+                                                      [0, 12], [7, 10], [5, 10], [22, 15]]],
         ["ZPI_cfg_tourSoldierGSD", ZPI_cfg_tourFarGSD],
         ["ZPI_cfg_tourVehicleGSD", ZPI_cfg_tourFarGSD],
         ["ZPI_cfg_tourDist", [300, 700]],            // farther, so higher camera
@@ -141,30 +141,30 @@ ZPI_tourProfiles = createHashMapFromArray [
         ["ZPI_cfg_tourExplosions", 0]
     ]],
     ["prone", createHashMapFromArray [
-        ["ZPI_cfg_tourScenes", [23, 23, 3, 25]],
-        ["ZPI_cfg_tourShots", createHashMapFromArray [[23, 18], [3, 12], [25, 12]]],
+        ["ZPI_cfg_tourScenes", [23, 23, 2, 25]],
+        ["ZPI_cfg_tourShots", createHashMapFromArray [[23, 18], [2, 12], [25, 12]]],
         ["ZPI_cfg_downKinds", ["prone_line", "prone_wedge", "prone_scatter", "prone_pairs"]],
         ["ZPI_cfg_tourExplosions", 0],
         ["ZPI_cfg_tourFiringPerScene", 0]
     ]],
     ["vehicles", createHashMapFromArray [
-        ["ZPI_cfg_tourScenes", [26, 27, 26, 27, 1, 4]],
-        ["ZPI_cfg_tourShots", createHashMapFromArray [[26, 20], [27, 15], [1, 10], [4, 15]]],
+        ["ZPI_cfg_tourScenes", [26, 27, 26, 27, 0, 3]],
+        ["ZPI_cfg_tourShots", createHashMapFromArray [[26, 20], [27, 15], [0, 10], [3, 15]]],
         ["ZPI_cfg_tourExplosions", 0],
         ["ZPI_cfg_tourFiringPerScene", 0]
     ]],
     ["explosions", createHashMapFromArray [
         // a few normal pictures per scene, then shells
-        ["ZPI_cfg_tourScenes", [6, 2, 23, 20, 25, 27, 3]],
-        ["ZPI_cfg_tourShots", createHashMapFromArray [[6, 3], [2, 3], [23, 3], [20, 3], [25, 3], [27, 3], [3, 3]]],
+        ["ZPI_cfg_tourScenes", [5, 1, 23, 20, 25, 27, 2]],
+        ["ZPI_cfg_tourShots", createHashMapFromArray [[5, 3], [1, 3], [23, 3], [20, 3], [25, 3], [27, 3], [2, 3]]],
         ["ZPI_cfg_tourExplosions", 6],
         ["ZPI_cfg_tourExplosionFrames", 2],
         ["ZPI_cfg_tourExplosionGSD", [0.025, 0.05]],
         ["ZPI_cfg_tourFiringPerScene", 0]
     ]],
     ["negatives", createHashMapFromArray [
-        ["ZPI_cfg_tourScenes", [28, 28, 28, 9]],
-        ["ZPI_cfg_tourShots", createHashMapFromArray [[28, 15], [9, 9]]],
+        ["ZPI_cfg_tourScenes", [28, 28, 28, 8]],
+        ["ZPI_cfg_tourShots", createHashMapFromArray [[28, 15], [8, 9]]],
         ["ZPI_cfg_maxBuildings", 0],                 // no building in the picture: nothing gets a label
         ["ZPI_cfg_tourExplosions", 0],
         ["ZPI_cfg_tourFiringPerScene", 0]

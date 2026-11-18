@@ -307,7 +307,7 @@ ZPI_fnc_tourScene = {
 
     switch (true) do {
         // ---- driving columns (road convoy, tank column, tank column across fields)
-        case (_scene in [4, 11, 17, 19, 26]): {
+        case (_scene in [3, 11, 17, 19, 26]): {
             sleep 10;                                           // let the column get going
             while { call _more } do {
                 private _v = call _vehs;
@@ -324,7 +324,7 @@ ZPI_fnc_tourScene = {
         };
         // ---- walking soldiers: a group walking through a fixed view
         //      Two of three bursts from a flatter angle (ZPI_cfg_tourElevPatrol), more from the side.
-        case (_scene in [5, 12, 20, 21]): {
+        case (_scene in [4, 12, 20, 21]): {
             sleep 5;
             while { call _more } do {
                 private _m = call _men;
@@ -432,7 +432,7 @@ ZPI_fnc_tourScene = {
     };
 
     // tanks in a static scene also fire (labelled "tank_fire"), not in driving columns
-    if (ZPI_cfg_tourFiringPerScene > 0 && {!(_scene in [4, 11, 17, 18, 19, 26, 28, 9, 10, 13, 14, 15, 16, 22])} && {!(call ZPI_fnc_tourDone)}) then {
+    if (ZPI_cfg_tourFiringPerScene > 0 && {!(_scene in [3, 11, 17, 18, 19, 26, 28, 8, 10, 13, 14, 15, 16, 22])} && {!(call ZPI_fnc_tourDone)}) then {
         private _tanks = ["tracked_vehicle"] call ZPI_fnc_tourObjs;
         if (_tanks isNotEqualTo []) then {
             for "_e" from 1 to ZPI_cfg_tourFiringPerScene do {
@@ -443,7 +443,7 @@ ZPI_fnc_tourScene = {
     };
 
     // one explosion picture (not in the negatives, building scenes or tank firing)
-    if (ZPI_cfg_tourExplosions > 0 && {!(_scene in [9, 10, 13, 14, 15, 16, 18, 22, 28])} && {!(call ZPI_fnc_tourDone)}) then {
+    if (ZPI_cfg_tourExplosions > 0 && {!(_scene in [8, 10, 13, 14, 15, 16, 18, 22, 28])} && {!(call ZPI_fnc_tourDone)}) then {
         private _a = call _all;
         if (_a isNotEqualTo []) then {
             for "_e" from 1 to ZPI_cfg_tourExplosions do {

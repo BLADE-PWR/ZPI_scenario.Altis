@@ -1095,10 +1095,8 @@ ZPI_fnc_scene_clutter = {
     ["clutter", format ['{"objects":%1,"points":%2,"pos":%3}', count ZPI_entities, count ZPI_clutterPoints, [_p, 1] call ZPI_fnc_v3]] call ZPI_fnc_event;
 };
 
-// index = number key (10 = minus, 11 = [, 12 = ], 13-22 = Shift+1 ... Shift+0, 23 = Shift+minus,
-// 24 = Shift+[, 25 = Shift+], 26 = Shift+backslash, 27 = Shift+;, 28 = Shift+')
+// index = position of the key in 1 2 3 4 5 6 7 8 9 0 - [ ] (0-12), Shift + the same keys then \ ; ' (13-28)
 ZPI_scenes = [
-    ["mixed",             ZPI_fnc_scene_mixed],
     ["checkpoint",        ZPI_fnc_scene_checkpoint],
     ["parked_column",     ZPI_fnc_scene_column],
     ["dug_in_infantry",   ZPI_fnc_scene_dugIn],
@@ -1108,6 +1106,7 @@ ZPI_scenes = [
     ["village_occlusion", ZPI_fnc_scene_village],
     ["size_ladder",       ZPI_fnc_scene_ladder],
     ["hard_negatives",    ZPI_fnc_scene_negatives],
+    ["mixed",             ZPI_fnc_scene_mixed],
     ["building_entry",    ZPI_fnc_scene_building],
     ["tank_column",       ZPI_fnc_scene_tankColumn],
     ["squads_split",      ZPI_fnc_scene_squadsSplit],
