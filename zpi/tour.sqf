@@ -512,6 +512,7 @@ ZPI_fnc_tourDataset = {
     ZPI_tourStop = false;
     ZPI_autoCapture = false;
     ZPI_firefight = false;
+    ZPI_eventCapture = true;
     ZPI_tourRunStart = ZPI_shotCount;
     private _plan = [ZPI_cfg_tourPlan, [["", ZPI_cfg_tourTarget]]] select (ZPI_cfg_tourPlan isEqualTo []);
     private _total = 0;
@@ -555,6 +556,7 @@ ZPI_fnc_tourDataset = {
     ZPI_targetGSD = ZPI_startGSD;
     ZPI_fovLock = false;
     ZPI_burstIdx = -1;
+    ZPI_eventCapture = false;
     ZPI_tourRunning = false;
     ["tour_end", format ['{"shots":%1,"stopped":%2}', ZPI_shotCount - ZPI_tourRunStart, ZPI_tourStop]] call ZPI_fnc_event;
     [format ["Dataset generator finished: %1 images. Run tools/make_yolo_dataset.py", ZPI_shotCount - ZPI_tourRunStart]] call ZPI_fnc_msg;

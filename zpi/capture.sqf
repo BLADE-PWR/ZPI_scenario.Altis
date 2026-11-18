@@ -656,7 +656,7 @@ ZPI_refUntil = 0;
 // Scheduled code only (waits one frame so the held view is what gets rendered).
 ZPI_fnc_takeRef = {             // [impact posASL] -> true if a reference was taken
     params ["_target"];
-    if (!ZPI_cfg_explosionRefShots || {!ZPI_eventCapture} || {ZPI_camLock} || {ZPI_frozen}
+    if (!ZPI_eventCapture || {ZPI_camLock} || {ZPI_frozen}
         || {ZPI_pendingCapture >= 0} || {ZPI_orthoRunning} || {!([_target] call ZPI_fnc_onScreen)}) exitWith { false };
     ZPI_camLock = true;
     ZPI_fovLock = true;
@@ -685,18 +685,18 @@ ZPI_fnc_releaseRef = {
 ZPI_fnc_addExplosion = {
     params ["_pos", "_size", ["_id", -1]];          // _size = [radius, height, duration]
     ZPI_explosions pushBack ([_pos, time] + _size);
-    if (ZPI_cfg_captureOnExplosion && {[_pos] call ZPI_fnc_onScreen}) then { [ZPI_cfg_expCaptureDelay] call ZPI_fnc_requestEventCapture };
+    if ([_pos] call ZPI_fnc_onScreen) then { [ZPI_cfg_expCaptureDelay] call ZPI_fnc_requestEventCapture };
     ["explosion", format ['{"id":%1,"cls":"explosion","pos_asl":%2,"radius":%3,"height":%4}',
         _id, [_pos, 2] call ZPI_fnc_v3, _size select 0, _size select 1]] call ZPI_fnc_event;
 };
 
 ZPI_fnc_addFiring = {
     params ["_p", "_dir", "_veh", "_hit"];
-    if ((vectorMagnitude _dir) < 0.5) then { _dir = vectorDir _veh };
-    private _R = [ZPI_cfg_fireSize select 0, ZPI_cfg_fireSize select 1] select (_hit >= 150);   // big cannon / autocannon
+    if ((vectorMagnitude _dir) < 0.5) then { _dir = vectorDir _veh; };
+    private _R = ZPI_cfg_fireSize select (_hit >= 150);  // autocannon / big cannon
     private _id = _veh getVariable ["ZPI_id", -1];
     ZPI_firings pushBack [_p, _dir, time, _id, _R, ZPI_cfg_fireDuration];
-    if (ZPI_cfg_captureOnFiring && {[_p] call ZPI_fnc_onScreen}) then {
+    if ([_p] call ZPI_fnc_onScreen) then {
         ZPI_nextEventCapture = 0;                         // a firing picture always gets taken
         [ZPI_cfg_fireCaptureDelay] call ZPI_fnc_requestEventCapture;
     };
@@ -734,7 +734,7 @@ ZPI_fnc_onFired = {
 // ---- automatic captures on explosions ---------------------------------------------------
 ZPI_pendingCapture   = -1;
 ZPI_nextEventCapture = 0;
-ZPI_eventCapture     = true;    // I toggles
+ZPI_eventCapture     = false;   // I toggles
 
 ZPI_fnc_onScreen = {            // [posASL] -> inside the picture and not too far
     params ["_p"];
@@ -783,7 +783,7 @@ ZPI_fnc_fireOptions = {
     {
         private _w = _x;
         private _lw = toLower _w;
-        if (({ (_lw find _x) >= 0 } count ["horn", "smoke", "flare", "laser", "cmflare"]) == 0) then {
+        if (({ (_lw find _x) >= 0 } count ["horn", "smoke", "flare", "laser"]) == 0) then {
             private _cfg = configFile >> "CfgWeapons" >> _w;
             private _muzzles = (getArray (_cfg >> "muzzles")) apply { [_x, _w] select (_x == "this") };
             if (_muzzles isEqualTo []) then { _muzzles = [_w] };
@@ -898,7 +898,7 @@ ZPI_fnc_volley = {
 
 // Shift+K: one volley
 ZPI_fnc_shoot = {
-    (call ZPI_fnc_volley) params ["_nv", "_ns"];
+    ([] call ZPI_fnc_volley) params ["_nv", "_ns"];
     [format ["Firing: %1 vehicles (aiming, first shot in ~%2 s), %3 soldiers", _nv, ZPI_cfg_turretTurnTime, _ns]] call ZPI_fnc_msg;
 };
 
@@ -909,7 +909,7 @@ ZPI_fnc_toggleFirefight = {
         ["Firefight ON (K to stop)"] call ZPI_fnc_msg;
         [] spawn {
             while { ZPI_firefight } do {
-                if (!ZPI_frozen && {ZPI_entities isNotEqualTo []}) then { call ZPI_fnc_volley };
+                if (!ZPI_frozen && {ZPI_entities isNotEqualTo []}) then { [] call ZPI_fnc_volley };
                 sleep ZPI_cfg_fireInterval;
             };
         };
