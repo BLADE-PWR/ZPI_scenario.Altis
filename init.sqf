@@ -60,9 +60,16 @@ ZPI_center       = [0, 0, 0];
     call ZPI_fnc_initExtension;
     call ZPI_fnc_initLocations;
 
-    ["session_start", format ['{"world":"%1","faction":"%2","locations":%3,"product":"%4","version":"%5","resolution":%6,"session":"%7"}',
+    // zpi_nograss addon (addon\): without it, soldiers on grass lose their lower part when seen from far away
+    private _noGrass = isClass (configFile >> "CfgPatches" >> "zpi_nograss");
+    if (!_noGrass) then {
+        diag_log "ZPI|warn|addon zpi_nograss not loaded: soldiers in grass are partly hidden from far away";
+        ["Addon zpi_nograss is NOT loaded: soldiers in grass are partly hidden from far away (README: grass addon)"] call ZPI_fnc_msg;
+    };
+
+    ["session_start", format ['{"world":"%1","faction":"%2","locations":%3,"product":"%4","version":"%5","resolution":%6,"session":"%7","nograss":%8}',
         worldName, ZPI_cfg_faction, count ZPI_locations, productVersion select 0, productVersion select 2,
-        str ((getResolution) select [0, 2]), ZPI_sessionTag]] call ZPI_fnc_event;
+        str ((getResolution) select [0, 2]), ZPI_sessionTag, _noGrass]] call ZPI_fnc_event;
 
     call ZPI_fnc_applyTime;
     call ZPI_fnc_applyWeather;

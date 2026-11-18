@@ -10,10 +10,11 @@ An Arma 3 mission that spawns military scenes (soldiers, tanks, vehicles, buildi
    cd "%USERPROFILE%\Documents\Arma 3\missions"
    git clone https://github.com/BLADE-PWR/ZPI_scenario.Altis
    ```
-3. Install the Python packages: `python -m pip install -r ZPI_scenario.Altis\tools\requirements.txt`
-4. With the game closed, add `maxScreenShotFolderSizeMB = 20000;` to `Documents\Arma 3\<profile>.Arma3Profile`
-5. In the game, open the Eden Editor on map Altis, then **Scenario → Open → ZPI_scenario** and **Play in Singleplayer**
-6. Video settings: keep the **Overall Quality** at the highest. Make sure **HDR quality** is Standard, and turn **Bloom, Radial Blur and Rotation Blur** off
+3. In the Arma 3 Launcher, under **Mods → ... → Add local mod**, pick the folder `ZPI_scenario.Altis\addon\@zpi_nograss` and keep it ticked when you play (see [Grass addon](#grass-addon))
+4. Install the Python packages: `python -m pip install -r ZPI_scenario.Altis\tools\requirements.txt`
+5. With the game closed, add `maxScreenShotFolderSizeMB = 20000;` to `Documents\Arma 3\<profile>.Arma3Profile`
+6. In the game, open the Eden Editor on map Altis, then **Scenario → Open → ZPI_scenario** and **Play in Singleplayer**
+7. Video settings: keep the **Overall Quality** at the highest. Make sure **HDR quality** is Standard, and turn **Bloom, Radial Blur and Rotation Blur** off
 
 ## Taking pictures
 
@@ -40,6 +41,12 @@ python tools\clean_start.py                  # delete outputs, screenshots and o
 ```
 
 After making a dataset with `make_yolo_dataset.py`, look at `output\dataset\previews\` before training. Each image also gets a JSON in `output\dataset\meta\` with the camera pose, intrinsics, laser range, terrain grid and the map position of every object.
+
+## Grass addon
+
+Beyond the grass draw distance, Arma sinks soldiers standing on grass into the ground (boots, up to half of a prone soldier), as a stand-in for the grass it no longer draws, but the labels still cover the whole body. The `@zpi_nograss` mod in `addon\` removes the grass from the ground types (`character = "Empty"`), so soldiers are drawn whole at any distance; the only visible change is that no grass is drawn near the camera either. It comes already packed, so loading it in the Launcher (setup step 3) is all you need. Without it, the mission shows a warning at start, and the game log has `"nograss":false` in its `session_start` line.
+
+Only after changing `addon\zpi_nograss\config.cpp` does the mod need packing again: in **Arma 3 Tools** (Steam) open **Addon Builder**, set the source to `addon\zpi_nograss`, the destination to `addon\@zpi_nograss\addons`, the addon prefix to `zpi_nograss`, untick **Binarize**, press **Pack** and commit the new `zpi_nograss.pbo`.
 
 ## Live telemetry (optional)
 

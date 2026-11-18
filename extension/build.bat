@@ -2,7 +2,7 @@
 rem Build zpi_telemetry_x64.dll with the MSVC build tools.
 rem
 rem   extension\build.bat                     build next to the source
-rem   extension\build.bat "D:\Steam\steamapps\common\Arma 3"   build and install
+rem   extension\build.bat "<PATH_TO_ARMA3>"   build and install
 rem
 rem /MT links the runtime statically, so the DLL needs no redistributable on
 rem whatever machine the game runs on.
@@ -55,7 +55,7 @@ exit /b 0
 :hint
 echo.
 echo Copy it next to Arma3_x64.exe to install, or pass the game folder:
-echo   extension\build.bat "D:\Steam\steamapps\common\Arma 3"
+echo   extension\build.bat "<PATH_TO_ARMA3>"
 exit /b 0
 
 :notools
