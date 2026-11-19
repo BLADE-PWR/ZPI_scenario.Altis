@@ -28,6 +28,14 @@ Every setting (what the generator makes, zoom, label rules, ...) is in `zpi\conf
 
 Screenshots go to `Documents\Arma 3\Screenshots\zpi\<session>\`, the labels and telemetry to the game log in `%LOCALAPPDATA%\Arma 3\`. The tools find both on their own.
 
+## Game controller (optional)
+
+The camera can be flown with a game controller through **Steam Input**, which turns the controller into keyboard and mouse input, so the mission needs no setup:
+
+1. Turn Steam Input on for Arma 3: in Steam, **Library → right-click Arma 3 → Properties → Controller**, set it to **Enable Steam Input**.
+2. With Steam running, open [`steam://controllerconfig/107410/3842206541`](steam://controllerconfig/107410/3842206541) (paste it into a browser) and click **Apply**. It is made for a PlayStation controller; with another type, set the keys by hand in the same window.
+3. Start Arma 3 from Steam. The left stick moves (WASD), the right stick looks around (arrow keys), the left stick click is fast (Shift), and L2 / R2 zoom (a light pull zooms slowly, a full pull fast). **Shift+Tab → Controller Layout** shows all the buttons.
+
 ## Tools
 
 Run them from the mission folder. Everything they make goes to `output\`, and every tool lists its options with `--help`.
