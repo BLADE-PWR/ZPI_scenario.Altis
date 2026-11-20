@@ -1,7 +1,7 @@
 // =====================================================================
 //  ZPI scene pack - entry point
 //  Drone ISR test scenes for detecting soldiers and armoured vehicles.
-//  Local singleplayer only (a dedicated server renders no image).
+//  Local singleplayer only or LAN multiplayer, no server required.
 // =====================================================================
 if (!hasInterface) exitWith {};
 
@@ -52,6 +52,16 @@ ZPI_center       = [0, 0, 0];
     player setCaptive true;
     player hideObject true;
     player enableSimulation false;
+
+    // ---- park every playable soldier out of the picture ----
+    {
+        _x hideObject true;
+        _x enableSimulation false;
+        if (local _x) then {
+            _x allowDamage false;
+            _x setCaptive true;
+        };
+    } forEach (playableUnits + switchableUnits + [player]);
 
     // session tag = UTC start time, used as the screenshot sub-folder
     private _t = systemTimeUTC;
