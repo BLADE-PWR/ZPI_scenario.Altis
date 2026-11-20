@@ -330,7 +330,7 @@ ZPI_fnc_updateHud = {
             ["", "  [" + ZPI_laserObj + "]"] select (ZPI_laserObj != "")]
     } else { "LASER  --- no return ---" };
     private _gsd = call ZPI_fnc_gsdNow;
-    private _scale = if (_gsd > 0) then { format ["GSD %1 m/px  soldier ~%2 px", _gsd toFixed 3, round (1.8 / _gsd)] } else { "GSD ---" };
+    private _scale = if (_gsd > 0) then { format ["GSD %1 m/px  soldier ~%2 px tall  tank ~%3 px long", _gsd toFixed 3, round (1.8 / _gsd), round (7 / _gsd)] } else { "GSD ---" };
     private _lock = if (ZPI_scaleLock) then { format ["  SCALE LOCK %1", ZPI_targetGSD toFixed 3] } else { "" };
     private _hold = if (ZPI_camLock) then { "  [CAMERA HELD]" } else { "" };
     // ground type under the crosshair + buildings that would be labelled (every 30 frames)
