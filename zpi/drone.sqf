@@ -230,10 +230,10 @@ ZPI_fnc_logTelemetry = {
     private _range = ["null", ZPI_laserRange toFixed 2] select (ZPI_laserRange > 0);
     private _res = getResolution;
     ["tel", format [
-        '{"frame":%1,"t_game":%2,"t_tick":%3,"camera":{"pos_asl":%4,"x_axis":%5,"y_axis":%6,"z_axis":%7,"hfov_deg":%8,"vfov_deg":%9},"range_m":%10,"image":{"w":%11,"h":%12},"scene":"%13","seed":%14,"region":%15}',
+        '{"frame":%1,"t_game":%2,"t_tick":%3,"camera":{"pos_asl":%4,"x_axis":%5,"y_axis":%6,"z_axis":%7,"hfov_deg":%8,"vfov_deg":%9},"range_m":%10,"image":{"w":%11,"h":%12},"scene":"%13","map":"%14","seed":%15,"region":%16}',
         diag_frameNo toFixed 0, time toFixed 3, diag_tickTime toFixed 4,
         [_o, 3] call ZPI_fnc_v3, [_r, 7] call ZPI_fnc_v3, [_u, 7] call ZPI_fnc_v3, [_f, 7] call ZPI_fnc_v3,
-        ZPI_hfov toFixed 6, ZPI_vfov toFixed 6, _range, _res select 0, _res select 1, ZPI_sceneName, ZPI_cfg_seed, ZPI_regionId
+        ZPI_hfov toFixed 6, ZPI_vfov toFixed 6, _range, _res select 0, _res select 1, ZPI_sceneName, toLower worldName, ZPI_cfg_seed, ZPI_regionId
     ]] call ZPI_fnc_emit;
 };
 
