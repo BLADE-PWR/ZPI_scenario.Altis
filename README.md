@@ -10,11 +10,12 @@ An Arma 3 mission that spawns military scenes (soldiers, tanks, vehicles, buildi
    cd "%USERPROFILE%\Documents\Arma 3\missions"
    git clone https://github.com/BLADE-PWR/ZPI_scenario.Altis
    ```
-3. In the Arma 3 Launcher, under **Mods → ... → Add local mod**, pick the folder `ZPI_scenario.Altis\addon\@zpi_nograss` and keep it ticked when you play (see [Grass addon](#grass-addon))
-4. Install the Python packages: `python -m pip install -r ZPI_scenario.Altis\tools\requirements.txt`
-5. With the game closed, add `maxScreenShotFolderSizeMB = 20000;` to `Documents\Arma 3\<profile>.Arma3Profile`
-6. In the game, open the Eden Editor on map Altis, then **Scenario → Open → ZPI_scenario** and **Play in Singleplayer**
-7. Video settings: keep the **Overall Quality** at the highest. Make sure **HDR quality** is Standard, and turn **Bloom, Radial Blur and Rotation Blur** off
+3. In the Arma 3 Launcher, under **Mods → ... → Add local mod**, pick the folder `ZPI_scenario.Altis\addon\@zpi_nograss` and keep it ticked when you play (see [No grass mod](#no-grass-mod))
+4. Copy `ZPI_scenario.Altis\extension\zpi_telemetry_x64.dll` into the Arma 3 game folder: in Steam, right-click **Arma 3** in the Library, then **Manage → Browse local files**, and put the extension here (see [Live telemetry](#live-telemetry))
+5. Install the Python packages: `python -m pip install -r ZPI_scenario.Altis\tools\requirements.txt`
+6. With the game closed, add `maxScreenShotFolderSizeMB = 20000;` to `Documents\Arma 3\<profile>.Arma3Profile`
+7. In the game, open the Eden Editor on map Altis, then **Scenario → Open → ZPI_scenario** and **Play in Singleplayer**
+8. Video settings: keep the **Overall Quality** at the highest. Make sure **HDR quality** is Standard, and turn **Bloom, Radial Blur and Rotation Blur** off
 
 ## Taking pictures
 
@@ -50,15 +51,16 @@ python tools\clean_start.py                  # delete outputs, screenshots and o
 
 After making a dataset with `make_yolo_dataset.py`, look at `output\dataset\previews\` before training. Each image also gets a JSON in `output\dataset\meta\` with the camera pose, intrinsics, laser range, terrain grid and the map position of every object.
 
-## Grass addon
+## No grass mod
 
 Beyond the grass draw distance, Arma sinks soldiers standing on grass into the ground (boots, up to half of a prone soldier), as a stand-in for the grass it no longer draws, but the labels still cover the whole body. The `@zpi_nograss` mod in `addon\` removes the grass from the ground types (`character = "Empty"`), so soldiers are drawn whole at any distance; the only visible change is that no grass is drawn near the camera either. It comes already packed, so loading it in the Launcher (setup step 3) is all you need. Without it, the mission shows a warning at start, and the game log has `"nograss":false` in its `session_start` line.
 
 Only after changing `addon\zpi_nograss\config.cpp` does the mod need packing again: in **Arma 3 Tools** (Steam) open **Addon Builder**, set the source to `addon\zpi_nograss`, the destination to `addon\@zpi_nograss\addons`, the addon prefix to `zpi_nograss`, untick **Binarize**, press **Pack** and commit the new `zpi_nograss.pbo`.
 
-## Live telemetry (optional)
+## Live telemetry
 
-The extension sends the same records over UDP as they happen, without waiting for the log. Build it with the MSVC build tools; with the game folder as an argument, it is also copied there:
+The extension sends ZPI log records over UDP as they happen, without waiting for the rpt log update.
+Only after changing `extension\zpi_telemetry.cpp` does the extension need building again, with the MSVC build tools. With the game folder as an argument, it is copied there automatically:
 
 ```
 extension\build.bat "<PATH_TO_ARMA3>"

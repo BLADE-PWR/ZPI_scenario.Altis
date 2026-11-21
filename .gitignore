@@ -12,13 +12,6 @@ runs/
 *.pt
 *.onnx
 
-# Compiled telemetry extension (build it with extension\build.bat)
-extension/*.dll
-extension/*.obj
-extension/*.lib
-extension/*.exp
-extension/*.pdb
-
 # Editors / OS
 .vscode/
 .idea/
