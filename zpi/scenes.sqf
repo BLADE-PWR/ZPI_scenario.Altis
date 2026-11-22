@@ -1128,16 +1128,25 @@ ZPI_scenes = [
     ["clutter",           ZPI_fnc_scene_clutter]
 ];
 
+// [scene key, camera to the scene even when it is in view?]
 ZPI_fnc_runScene = {
-    params ["_n"];
+    params ["_n", ["_view", false]];
     if (_n < 0 || {_n >= count ZPI_scenes}) exitWith {};
+    if (!canSuspend) exitWith { _this spawn ZPI_fnc_runScene };
     call ZPI_fnc_clearScene;
-    ZPI_rngCounter = 0;
-    ZPI_currentScene = _n;
-    ZPI_sceneName = (ZPI_scenes select _n) select 0;
-    ["scene_start", format ['{"key":%1,"center":%2}', _n, [ZPI_center, 1] call ZPI_fnc_v3]] call ZPI_fnc_event;
-    [ZPI_center] call ((ZPI_scenes select _n) select 1);
-    ["scene_ready", format ['{"objects":%1,"props":%2}', count ZPI_entities, count ZPI_sceneStatics]] call ZPI_fnc_event;
-    [false] call ZPI_fnc_viewScene;      // jump to the scene if it is out of view
-    [format ["Scene %1 '%2', seed %3, region %4: %5 objects", _n, ZPI_sceneName, ZPI_cfg_seed, ZPI_regionId, count ZPI_entities]] call ZPI_fnc_msg;
+    // deleted objects are gone only after this frame: spawning now would put the new scene inside the old one
+    private _token = ZPI_sceneToken;
+    private _f = diag_frameNo;
+    waitUntil { diag_frameNo > _f };
+    if (ZPI_sceneToken != _token) exitWith {};      // another scene was started meanwhile
+    isNil {                                         // built within one frame, never interrupted by the scheduler
+        ZPI_rngCounter = 0;
+        ZPI_currentScene = _n;
+        ZPI_sceneName = (ZPI_scenes select _n) select 0;
+        ["scene_start", format ['{"key":%1,"center":%2}', _n, [ZPI_center, 1] call ZPI_fnc_v3]] call ZPI_fnc_event;
+        [ZPI_center] call ((ZPI_scenes select _n) select 1);
+        ["scene_ready", format ['{"objects":%1,"props":%2}', count ZPI_entities, count ZPI_sceneStatics]] call ZPI_fnc_event;
+        [_view] call ZPI_fnc_viewScene;
+        [format ["Scene %1 '%2', seed %3, region %4: %5 objects", _n, ZPI_sceneName, ZPI_cfg_seed, ZPI_regionId, count ZPI_entities]] call ZPI_fnc_msg;
+    };
 };
