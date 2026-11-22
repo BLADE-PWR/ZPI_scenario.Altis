@@ -350,7 +350,7 @@ ZPI_fnc_updateHud = {
 
 // ---- per-frame loop -------------------------------------------------------------
 ZPI_fnc_onFrame = {
-    if (isGamePaused) exitWith {};
+    if (isGamePaused || {!isNull (findDisplay 49)}) exitWith {};
     private _rdt = diag_deltaTime min 0.1;
 
     if (!ZPI_frozen && {!ZPI_camLock}) then {
