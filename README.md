@@ -17,6 +17,13 @@ An Arma 3 mission that spawns military scenes (soldiers, tanks, vehicles, buildi
 7. In the game, open the Eden Editor on map Altis, then **Scenario → Open → ZPI_scenario** and **Play in Singleplayer**
 8. Video settings: keep the **Overall Quality** at the highest. Make sure **HDR quality** is Standard, and turn **Bloom, Radial Blur and Rotation Blur** off
 
+## Other maps
+
+If you want to play this scenario on different map than Altis:
+
+1. Copy the folder `ZPI_scenario.Altis` in `Documents\Arma 3\missions\`
+2. Rename the copy to end in the name of that map, e.g. `ZPI_scenario.Stratis`
+
 ## Taking pictures
 
 Press **H** in the mission for all keys and scenes. The main ones:

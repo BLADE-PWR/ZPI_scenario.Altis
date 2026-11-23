@@ -47,14 +47,11 @@ ZPI_center       = [0, 0, 0];
     enableRadio false;
     setTimeMultiplier 0;
 
-    // ---- park the player out of the picture ----
-    player allowDamage false;
-    player setCaptive true;
-    player hideObject true;
-    player enableSimulation false;
-
     // ---- park every playable soldier out of the picture ----
     {
+        if (worldName != "Altis") then {
+            _x setPosASL [worldSize/2, worldSize/2, 0];
+        };
         _x hideObject true;
         _x enableSimulation false;
         if (local _x) then {
