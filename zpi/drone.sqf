@@ -290,7 +290,6 @@ ZPI_fnc_gsdNow = {
 ZPI_fnc_setGSD = {
     params ["_g"];
     ZPI_targetGSD = (_g max 0.004) min 0.5;
-    [format ["Scale %1 m/px: soldier ~%2 px tall, tank ~%3 px long", ZPI_targetGSD toFixed 3, round (1.8 / ZPI_targetGSD), round (7 / ZPI_targetGSD)]] call ZPI_fnc_msg;
 };
 
 ZPI_fnc_toggleScaleLock = {
