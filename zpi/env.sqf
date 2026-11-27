@@ -78,46 +78,49 @@ ZPI_fnc_nextWeather = {
 };
 
 // ---- artillery barrage ---------------------------------------------------------
-// Impacts land at least ZPI_cfg_barrageMinClear m from every scene object.
+// Every shell lands on a random spot of the picture as it is just before that shell,
+// at least ZPI_cfg_barrageMinClear m from every scene object.
 // Each detonation is logged with its exact position (projectile "Explode" handler).
 ZPI_barrageRunning = false;
 ZPI_expId = 100000;            // explosion ids live in their own range
 
-ZPI_fnc_safeImpactPos = {
-    params ["_around"];
-    private _best = _around;
-    for "_t" from 1 to 30 do {
-        private _p = [_around, [360] call ZPI_fnc_rand, 0, [60, 300] call ZPI_fnc_randRange] call ZPI_fnc_rel;
-        private _clear = ZPI_entities findIf { !isNull (_x select 1) && {((_x select 1) distance2D _p) < ZPI_cfg_barrageMinClear} } == -1;
-        if (_clear && {!surfaceIsWater _p}) exitWith { _best = _p };
+// Random open ground in the camera picture (middle 80 %, so the fireball fits), ASL; [] when none.
+ZPI_fnc_impactInView = {
+    private _out = [];
+    for "_t" from 1 to 40 do {
+        private _s = screenToWorld [safeZoneX + safeZoneW * ([0.1, 0.9] call ZPI_fnc_randRange), safeZoneY + safeZoneH * ([0.1, 0.9] call ZPI_fnc_randRange)];
+        private _p = [_s select 0, _s select 1, getTerrainHeightASL _s];
+        if (!surfaceIsWater _p && {[_p] call ZPI_fnc_onScreen}
+            && {(ZPI_entities findIf { !isNull (_x select 1) && {((_x select 1) distance2D _p) < ZPI_cfg_barrageMinClear} }) == -1}) exitWith { _out = _p };
     };
-    _best
+    _out
 };
 
 ZPI_fnc_barrage = {
     if (ZPI_barrageRunning) exitWith { ["Barrage already running"] call ZPI_fnc_msg };
     ZPI_barrageRunning = true;
     private _ammo = ([ZPI_cfg_barrageAmmo, "CfgAmmo"] call ZPI_fnc_validClasses) param [0, "Sh_82mm_AMOS"];
-    private _impacts = [];
-
-    private _around = ZPI_center;
-    private _lp = call ZPI_fnc_lookPoint;
-    if (_lp isNotEqualTo [] && {(ZPI_camPosASL distance _lp) < 4000}) then { _around = [_lp select 0, _lp select 1, 0] };
-    for "_i" from 1 to ZPI_cfg_barrageCount do { _impacts pushBack ([_around] call ZPI_fnc_safeImpactPos) };
-    ["barrage", format ['{"ammo":"%1","count":%2}', _ammo, count _impacts]] call ZPI_fnc_event;
+    ["barrage", format ['{"ammo":"%1","count":%2}', _ammo, ZPI_cfg_barrageCount]] call ZPI_fnc_event;
     ["Barrage incoming"] call ZPI_fnc_msg;
-    [_ammo, _impacts] spawn {
-        params ["_ammo", "_impacts"];
-        {
-            private _z = getTerrainHeightASL _x;
-            // wait for the previous explosion picture, then hold the camera and take the reference
+    [_ammo] spawn {
+        params ["_ammo"];
+        for "_i" from 1 to ZPI_cfg_barrageCount do {
+            // wait for the previous explosion picture, then pick the spot in the current view
             private _t0 = time;
             waitUntil { (!ZPI_frozen && {!ZPI_camLock} && {ZPI_pendingCapture < 0}) || {time > _t0 + 6} };
-            if ([[_x select 0, _x select 1, _z]] call ZPI_fnc_takeRef) then { sleep 0.15 };
+            private _p = call ZPI_fnc_impactInView;
+            if (_p isEqualTo []) then {
+                ["Barrage: no open ground in view"] call ZPI_fnc_msg;
+                sleep 0.5;
+                continue;
+            };
+            _p params ["_x0", "_y0", "_z"];
+            // hold the camera and take the reference picture
+            if ([_p] call ZPI_fnc_takeRef) then { sleep 0.15 };
             ZPI_expId = ZPI_expId + 1;
-            private _sh = createVehicle [_ammo, [_x select 0, _x select 1, 60], [], 0, "CAN_COLLIDE"];
+            private _sh = createVehicle [_ammo, [_x0, _y0, 60], [], 0, "CAN_COLLIDE"];
             _sh setVariable ["ZPI_id", ZPI_expId];
-            _sh setPosASL [_x select 0, _x select 1, _z + 60];
+            _sh setPosASL [_x0, _y0, _z + 60];
             _sh setVectorDirAndUp [[0, 0, -1], [0, 1, 0]];
             _sh setVariable ["ZPI_expSize", [_ammo] call ZPI_fnc_explosionSize];
             _sh addEventHandler ["Explode", {
@@ -126,7 +129,7 @@ ZPI_fnc_barrage = {
             }];
             _sh setVelocity [0, 0, -150];
             sleep (0.8 + random 0.6);
-        } forEach _impacts;
+        };
         ZPI_barrageRunning = false;
     };
 };
