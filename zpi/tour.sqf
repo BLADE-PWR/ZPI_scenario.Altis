@@ -228,7 +228,7 @@ ZPI_fnc_tourAnimate = {
 // [vehicles, extra pictures] -> pictures taken, -1 when no vehicle can fire
 ZPI_fnc_tourFiring = {
     params ["_cands", ["_extra", 1]];
-    private _v = _cands select { alive _x && {!(_x getVariable ["ZPI_busy", false])} && {(_x getVariable ["ZPI_firePlan", []]) isNotEqualTo ["none"]} };
+    private _v = _cands select { alive _x && {!(_x getVariable ["ZPI_busy", false])} && {!isNil { _x getVariable "ZPI_gun" }} };
     if (_v isEqualTo []) exitWith { -1 };
     private _t = selectRandom _v;
     call ZPI_fnc_tourWaitIdle;

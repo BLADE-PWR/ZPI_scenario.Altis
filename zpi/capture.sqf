@@ -716,6 +716,11 @@ ZPI_fnc_explosionSize = {        // from the ammo config: [radius, height, durat
 ZPI_fnc_onFired = {
     params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile"];
     _unit setVariable ["ZPI_firedAt", time];
+    if (_unit isKindOf "Man") then {
+        _unit setAmmo [_weapon, getNumber (configFile >> "CfgMagazines" >> _magazine >> "count")];
+    } else {
+        _unit setVehicleAmmo 1;
+    };
     if (isNull _projectile) exitWith {};
     private _cfg = configFile >> "CfgAmmo" >> _ammo;
     // a vehicle's main gun (tank cannon, autocannon): label the muzzle blast and take a picture
@@ -776,40 +781,10 @@ ZPI_fnc_fireTarget = {          // [unit, dMin, dMax] -> clear ground point, ASL
     [_best select 0, _best select 1, getTerrainHeightASL _best]
 };
 
-// All (weapon, muzzle, fire mode) combinations of the main turret, main gun first.
-ZPI_fnc_fireOptions = {
+ZPI_fnc_gunFire = {
     params ["_v"];
-    private _out = [];
-    {
-        private _w = _x;
-        private _lw = toLower _w;
-        if (({ (_lw find _x) >= 0 } count ["horn", "smoke", "flare", "laser"]) == 0) then {
-            private _cfg = configFile >> "CfgWeapons" >> _w;
-            private _muzzles = (getArray (_cfg >> "muzzles")) apply { [_x, _w] select (_x == "this") };
-            if (_muzzles isEqualTo []) then { _muzzles = [_w] };
-            {
-                private _m = _x;
-                private _mcfg = [_cfg >> _m, _cfg] select (_m == _w);
-                private _modes = (getArray (_mcfg >> "modes")) apply { [_x, _m] select (_x == "this") };
-                if (_modes isEqualTo []) then { _modes = [_m] };
-                _out pushBack [_w, _m, _modes select 0];
-            } forEach _muzzles;
-        };
-    } forEach (_v weaponsTurret [0]);
-    _out
-};
-
-// One attempt with one method; true when the Fired handler confirms a shot.
-ZPI_fnc_tryFire = {
-    params ["_v", "_g", "_opt", "_method"];
-    _opt params ["_w", "_m", "_mode"];
     private _t0 = time;
-    _v selectWeaponTurret [_w, [0]];
-    switch (_method) do {
-        case 0: { [_v, _m, [0]] call BIS_fnc_fire };
-        case 1: { _g forceWeaponFire [_m, _mode] };
-        default { _v fire _m };
-    };
+    [_v, _v getVariable "ZPI_gun", [0]] call BIS_fnc_fire;
     sleep 0.3;
     (_v getVariable ["ZPI_firedAt", -1]) >= _t0
 };
@@ -828,50 +803,38 @@ ZPI_fnc_vehFire = {
         diag_log format ["ZPI|warn|%1 has no gunner seat, cannot fire", typeOf _v];
         _v setVariable ["ZPI_busy", false];
     };
+    _v selectWeaponTurret [(_v weaponsTurret [0]) select 0, [0]];   // the only gun left; must be selected once a gunner sits in
     private _grp = group _g;
+    private _behaviour = behaviour _g;
+    _grp setBehaviour "AWARE";            // in SAFE the gunner rides turned out and cannot use the gun
     _grp setCombatMode "YELLOW";
     private _tgt = [_v, ZPI_cfg_fireRange select 0, ZPI_cfg_fireRange select 1] call ZPI_fnc_fireTarget;
     _g doWatch (ASLToAGL _tgt);
     sleep ZPI_cfg_turretTurnTime;
 
-    // find (once per vehicle) a weapon + method that really fires, then reuse it
-    private _plan = _v getVariable ["ZPI_firePlan", []];
     private _fired = 0;
-    if (_plan isEqualTo []) then {
-        {
-            private _opt = _x;
-            for "_method" from 0 to 2 do {
-                waitUntil { !ZPI_frozen };
-                if ([_v, _g, _opt, _method] call ZPI_fnc_tryFire) exitWith { _plan = [_opt, _method]; _fired = 1 };
-            };
-            if (_plan isNotEqualTo []) exitWith {};
-        } forEach ([_v] call ZPI_fnc_fireOptions);
-        if (_plan isEqualTo []) then {
-            _plan = ["none"];
-            diag_log format ["ZPI|warn|%1: no weapon could be fired (%2)", typeOf _v, _v weaponsTurret [0]];
+    private _deadline = time + 6 + 8 * _shots;           // tank guns reload in several seconds
+    while { _fired < _shots && {time < _deadline} && {alive _v} } do {
+        waitUntil { !ZPI_frozen };
+        // the flash and flames of the previous shot must be gone before the reference picture
+        waitUntil {
+            sleep 0.1;
+            time > (_v getVariable ["ZPI_firedAt", -10]) + 2
         };
-        _v setVariable ["ZPI_firePlan", _plan];
+        // hold the camera for the measured picture: the impact if it is in view, else the firing tank
+        if !([_tgt] call ZPI_fnc_takeRef) then { [getPosASL _v] call ZPI_fnc_takeRef };
+        if ([_v] call ZPI_fnc_gunFire) then {
+            _fired = _fired + 1;
+            sleep (0.8 + random 1.5)
+        } else { sleep 0.4 };
     };
-    if (_plan isNotEqualTo ["none"]) then {
-        _plan params ["_opt", "_method"];
-        private _deadline = time + 6 + 8 * _shots;           // tank guns reload in several seconds
-        while { _fired < _shots && {time < _deadline} && {alive _v} } do {
-            waitUntil { !ZPI_frozen };
-            // the flash and flames of the previous shot must be gone before the reference picture
-            waitUntil {
-                sleep 0.1;
-                time > (_v getVariable ["ZPI_firedAt", -10]) + 2
-            };
-            // hold the camera for the measured picture: the impact if it is in view, else the firing tank
-            if !([_tgt] call ZPI_fnc_takeRef) then { [getPosASL _v] call ZPI_fnc_takeRef };
-            if ([_v, _g, _opt, _method] call ZPI_fnc_tryFire) then {
-                _fired = _fired + 1;
-                sleep (0.8 + random 1.5)
-            } else { sleep 0.4 };
-        };
+    if (_fired == 0 && {alive _v}) then {          // never picked again
+        diag_log format ["ZPI|warn|%1: gun %2 did not fire", typeOf _v, _v getVariable "ZPI_gun"];
+        _v setVariable ["ZPI_gun", nil];
     };
     _g doWatch objNull;
     _grp setCombatMode "BLUE";
+    _grp setBehaviour _behaviour;
     _v setVariable ["ZPI_busy", false];
 };
 
@@ -881,7 +844,7 @@ ZPI_fnc_volley = {
     private _veh = (ZPI_entities select {
         private _o = _x select 1;
         (_x select 2) in ["tracked_vehicle", "wheeled_vehicle"] && {alive _o} && {!(_o getVariable ["ZPI_busy", false])}
-        && {(_o getVariable ["ZPI_firePlan", []]) isNotEqualTo ["none"]} && {(_o weaponsTurret [0]) isNotEqualTo []}
+        && {!isNil { _o getVariable "ZPI_gun" }}
     }) apply { _x select 1 };
     _veh = (_veh call BIS_fnc_arrayShuffle) select [0, _nVeh];
     { [_x, ZPI_cfg_vehShots] spawn ZPI_fnc_vehFire } forEach _veh;

@@ -40,6 +40,30 @@ ZPI_fnc_newGroup = {
     _g
 };
 
+ZPI_fnc_oneMagazine = {
+    params ["_o"];
+    if (_o isKindOf "Man") exitWith {
+        private _mag = (primaryWeaponMagazine _o) param [0, ""];
+        if (_mag == "") exitWith {};
+        { _o removePrimaryWeaponItem _x } forEach ((primaryWeaponMagazine _o) - [_mag]);   // grenade launcher round
+        { _o removeSecondaryWeaponItem _x } forEach (secondaryWeaponMagazine _o);
+        { _o removeHandgunItem _x } forEach (handgunMagazine _o);
+        { _o removeMagazines _x } forEach ((magazines _o) - [_mag]);
+    };
+    if ((typeOf _o) in ZPI_cfg_noFireVehicles) exitWith {};
+    // main gun: first weapon of the main turret that is not a horn, smoke, flares or laser
+    private _w = ((_o weaponsTurret [0]) select {
+        private _lw = toLower _x;
+        ({ (_lw find _x) >= 0 } count ["horn", "smoke", "flare", "laser"]) == 0
+    }) param [0, ""];
+    if (_w == "") exitWith {};
+    (weaponState [_o, [0], _w]) params ["", ["_muzzle", ""], "", ["_mag", ""]];
+    if (_mag == "") exitWith { diag_log format ["ZPI|warn|%1: main gun %2 has no magazine, cannot fire", typeOf _o, _w] };
+    { if (_x != _w) then { _o removeWeaponTurret [_x, [0]] } } forEach (_o weaponsTurret [0]);
+    { _o removeMagazinesTurret [_x, [0]] } forEach ((_o magazinesTurret [0]) - [_mag]);
+    _o setVariable ["ZPI_gun", _muzzle];
+};
+
 // [group, posATL, dir, stance "UP"|"MIDDLE"|"DOWN"|"AUTO", static?, class?, cls?]
 ZPI_fnc_spawnSoldier = {
     params ["_grp", "_pos", "_dir", ["_stance", "UP"], ["_static", true], ["_class", ""], ["_cls", ""]];
@@ -50,6 +74,7 @@ ZPI_fnc_spawnSoldier = {
     _u allowDamage false;
     _u setUnitPos _stance;
     if (_static) then { _u disableAI "PATH" };
+    [_u] call ZPI_fnc_oneMagazine;
     _u addEventHandler ["Fired", { _this call ZPI_fnc_onFired }];
     if (_cls == "") then { _cls = "soldier" };
     [_u, _cls] call ZPI_fnc_register;
@@ -75,6 +100,7 @@ ZPI_fnc_spawnVehicle = {
         _v engineOn false;
         _v lock 2;
     };
+    [_v] call ZPI_fnc_oneMagazine;
     _v addEventHandler ["Fired", { _this call ZPI_fnc_onFired }];
     if (_cls == "") then { _cls = [_class] call ZPI_fnc_clsOf };
     [_v, _cls] call ZPI_fnc_register;

@@ -55,6 +55,7 @@ ZPI_cfg_labelsPerLine = 3;       // boxes per log line (log lines over ~1000 cha
 ZPI_cfg_shootersMax     = 4;            // soldiers that fire per volley
 ZPI_cfg_vehShootersMax  = 2;            // vehicles that fire per volley
 ZPI_cfg_vehShots        = 2;            // rounds per vehicle per volley
+ZPI_cfg_noFireVehicles  = ["O_APC_Tracked_02_AA_F"];   // never fire (Tigris AA: weak shots that could confuse the model)
 ZPI_cfg_fireInterval    = 4;            // s between volleys while the firefight is on
 ZPI_cfg_fireRange       = [250, 500];   // m: vehicles aim at clear ground this far away, so impacts are in the picture
 ZPI_cfg_turretTurnTime  = 2.5;          // s to let the turret turn before the first shot
